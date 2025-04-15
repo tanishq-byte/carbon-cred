@@ -1,6 +1,6 @@
 // components/AuthForm.tsx
 import { useState } from "react";
-import { auth } from "../firebase";
+//import { auth } from "../firebase";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import API from "../lib/axios";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
@@ -89,29 +89,29 @@ const AuthForm = () => {
     };
 
 
-    const handleLogin = async () => {
-      setPressed(true);
-      setTimeout(() => setPressed(false), 200);
+    // const handleLogin = async () => {
+    //   setPressed(true);
+    //   setTimeout(() => setPressed(false), 200);
   
-      try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        alert(`✅ Logged in as ${userCredential.user.email}`);
-      } catch (err: any) {
-        alert("❌ Login Error: " + err.message);
-      }
-    };
+    //   try {
+    //     const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    //     alert(`✅ Logged in as ${userCredential.user.email}`);
+    //   } catch (err: any) {
+    //     alert("❌ Login Error: " + err.message);
+    //   }
+    // };
   
-    const handleSignup = async () => {
-      setPressed(true);
-      setTimeout(() => setPressed(false), 200);
+    // const handleSignup = async () => {
+    //   setPressed(true);
+    //   setTimeout(() => setPressed(false), 200);
   
-      try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        alert(`✅ Account created for ${userCredential.user.email}`);
-      } catch (err: any) {
-        alert("❌ Signup Error: " + err.message);
-      }
-    };
+    //   try {
+    //     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    //     alert(`✅ Account created for ${userCredential.user.email}`);
+    //   } catch (err: any) {
+    //     alert("❌ Signup Error: " + err.message);
+    //   }
+    // };
   
     return (
       <div className="max-w-md p-6 mx-auto mt-16 bg-white shadow-md dark:bg-zinc-900 rounded-xl">
@@ -122,7 +122,10 @@ const AuthForm = () => {
           </TabsList>
   
           <TabsContent value="login">
-            <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); handleLogin(); handleAuth(true) }}>
+            <form className="space-y-3" onSubmit={(e) => { 
+              e.preventDefault(); 
+              // handleLogin(); 
+              handleAuth(true) }}>
               <input
                 type="email"
                 placeholder="Email"
@@ -147,7 +150,10 @@ const AuthForm = () => {
           </TabsContent>
   
           <TabsContent value="signup">
-            <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); handleSignup(); handleAuth(false) }}>
+            <form className="space-y-3" onSubmit={(e) => { 
+              e.preventDefault(); 
+              //handleSignup(); 
+              handleAuth(false) }}>
               <input
                 type="email"
                 placeholder="Email"
@@ -176,6 +182,8 @@ const AuthForm = () => {
   };
 
 
+
+  export default AuthForm;
 
 // const AuthForm = () => {
 //   const [email, setEmail] = useState("");
@@ -256,4 +264,4 @@ const AuthForm = () => {
 
 
 
-export default AuthForm;
+

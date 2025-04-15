@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import API from "../lib/axios";
+import { decodeToken } from "../utils/decodeToken";
 import { formatAddress } from "../utils/formatAddress";
 
 interface Emission {

@@ -8,9 +8,9 @@
     "mongoose": "^8.13.2"
   },
   "scripts": {
-  "dev": "nodemon index.ts",
-  "start": "ts-node index.ts",
-  "build": "tsc"
+    "dev": "nodemon index.ts",
+    "start": "ts-node index.ts",
+    "build": "tsc"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
