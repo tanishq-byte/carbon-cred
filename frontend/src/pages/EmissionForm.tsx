@@ -39,7 +39,8 @@ const EmissionForm = () => {
           <label className="block font-semibold">Fuel Usage (liters)</label>
           <input
             type="number"
-            value={fuel}
+            placeholder="0"
+            //value={fuel}
             onChange={(e) => setFuel(Number(e.target.value))}
             className="w-full px-3 py-2 border rounded"
             min="0"
@@ -50,7 +51,8 @@ const EmissionForm = () => {
           <label className="block font-semibold">Electricity (kWh)</label>
           <input
             type="number"
-            value={electricity}
+            placeholder="0"
+            //value={electricity}
             onChange={(e) => setElectricity(Number(e.target.value))}
             className="w-full px-3 py-2 border rounded"
             min="0"
@@ -61,7 +63,8 @@ const EmissionForm = () => {
           <label className="block font-semibold">Waste (kg)</label>
           <input
             type="number"
-            value={waste}
+            placeholder="0"
+            //value={waste}
             onChange={(e) => setWaste(Number(e.target.value))}
             className="w-full px-3 py-2 border rounded"
             min="0"
