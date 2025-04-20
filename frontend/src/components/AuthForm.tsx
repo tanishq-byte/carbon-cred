@@ -1,10 +1,10 @@
 // components/AuthForm.tsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 //import { auth } from "../firebase";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import API from "../lib/axios";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-
+import { useNavigate } from "react-router-dom";
 // const AuthForm = () => {
 //   const [email, setEmail] = useState("");
 //   const [password, setPassword] = useState("");
@@ -68,11 +68,16 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "fire
 
 
 const AuthForm = () => {
+    const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [pressed, setPressed] = useState(false);
-  
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+    useEffect(() => {
+      const token = localStorage.getItem("token");
+      setIsLoggedIn(!!token);
+    }, [] );
 
     const handleAuth = async (isLogin: boolean) => {
         setPressed(true);
@@ -82,11 +87,50 @@ const AuthForm = () => {
           const route = isLogin ? "login" : "register";
           const res = await API.post(`/auth/${route}`, { email, password });
           localStorage.setItem("token", res.data.token);
+          localStorage.setItem("role", res.data.role);  // <--- this is what was missing!
+          setTimeout(() => {
+            navigate("/dashboard");
+            window.location.reload();
+          }, 1000);
+          //window.location.reload(); // optional: isse force refresh hota h
+
           alert(`✅ ${isLogin ? "Logged in" : "Registered"} as ${email}`);
         } catch (err: any) {
           alert("❌ Error: " + err.response?.data?.error || err.message);
-        }
+        };
+        setIsLoggedIn(true);
+
+        
     };
+
+    const handleLogout = () => {
+      localStorage.removeItem("token");
+      localStorage.removeItem("role");
+      alert("🚪 Logged out");
+      setIsLoggedIn(false);
+
+      setTimeout(() => {
+        navigate("/");
+      }, 1000);
+
+      window.location.reload(); // optional: isse force refresh hota h
+
+
+    };
+
+    if (isLoggedIn) {
+      return (
+        <div className="max-w-md p-6 mx-auto mt-16 bg-white shadow-md dark:bg-zinc-900 rounded-xl text-center">
+          <p className="mb-4 text-lg">✅ You're already logged in.</p>
+          <button
+            onClick={handleLogout}
+            className="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700"
+          >
+            Logout
+          </button>
+        </div>
+      );
+    }
 
 
     // const handleLogin = async () => {

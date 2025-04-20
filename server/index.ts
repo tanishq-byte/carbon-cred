@@ -6,6 +6,7 @@ import cors from "cors";
 import authRoutes from "./routes/auth";
 import emissionRoutes from "./routes/emission";
 import tokenRoutes from "./routes/tokens";
+import adminRoutes from "./routes/admin"
 import { authenticateJWT } from "./middleware/auth";
 
 dotenv.config(); // Load .env variables
@@ -33,6 +34,7 @@ app.use((req, res, next) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/emissions", authenticateJWT, emissionRoutes);
 app.use("/api/tokens", authenticateJWT, tokenRoutes);
+app.use("/api/admin", authenticateJWT, adminRoutes);
 
 // debug
 console.log("PORT:", PORT);
