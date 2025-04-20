@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 //import { auth } from "../firebase";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import API from "../lib/axios";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+//import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 // const AuthForm = () => {
 //   const [email, setEmail] = useState("");
