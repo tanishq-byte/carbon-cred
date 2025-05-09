@@ -12,7 +12,7 @@ import { authenticateJWT } from "./middleware/auth";
 dotenv.config(); // Load .env variables
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGODB_URI || "";
 
 if (!MONGO_URI || !process.env.JWT_SECRET || !PORT) {
@@ -47,13 +47,20 @@ app.get('/', (req, res) => {
 });
 
 // Connect to MongoDB and start server
-mongoose
-  .connect(MONGO_URI)
-  .then(() => {
-    console.log("✅ Connected to MongoDB");
-    app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
-  })
-  .catch((err) => {
-    console.error("❌ MongoDB connection failed:", err);
-    process.exit(1);
-  });
+// mongoose
+//   .connect(MONGO_URI)
+//   .then(() => {
+//     console.log("✅ Connected to MongoDB");
+//     app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+//   })
+//   .catch((err) => {
+//     console.error("❌ MongoDB connection failed:", err);
+//     process.exit(1);
+//   });
+
+async function main(){
+  await mongoose.connect(MONGO_URI);
+  console.log("Connected to Mongodb");
+  app.listen(PORT,()=>{console.log(`🚀 Server running on http://localhost:${PORT}`)})
+}
+main()
