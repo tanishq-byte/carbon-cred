@@ -1,4 +1,3 @@
-// server/index.ts
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -9,7 +8,7 @@ import tokenRoutes from "./routes/tokens";
 import adminRoutes from "./routes/admin"
 import { authenticateJWT } from "./middleware/auth";
 
-dotenv.config(); // Load .env variables
+dotenv.config(); 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,28 +19,28 @@ if (!MONGO_URI || !process.env.JWT_SECRET || !PORT) {
   process.exit(1);
 }
 
-// Global middlewares
+
 app.use(cors());
 app.use(express.json());
 
-// Optional: Log all incoming requests
+
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.url}`);
   next();
 });
 
-// Routes
+
 app.use("/api/auth", authRoutes);
 app.use("/api/emissions", authenticateJWT, emissionRoutes);
 app.use("/api/tokens", authenticateJWT, tokenRoutes);
 app.use("/api/admin", authenticateJWT, adminRoutes);
 
-// debug
+
 console.log("PORT:", PORT);
 console.log("MONGO_URI:", MONGO_URI ? "✓" : "❌ MISSING");
 console.log("JWT_SECRET:", process.env.JWT_SECRET ? "✓" : "❌ MISSING");
 
-// 👇 ADD THIS 👇
+
 app.get('/', (req, res) => {
   res.send('🚀 Hello from your DATABASE!');
 });

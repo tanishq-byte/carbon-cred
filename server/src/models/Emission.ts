@@ -1,4 +1,3 @@
-// server/models/Emission.ts
 import mongoose from "mongoose";
 
 const EmissionSchema = new mongoose.Schema({

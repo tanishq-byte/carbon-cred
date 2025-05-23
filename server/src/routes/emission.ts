@@ -1,19 +1,14 @@
-// server/routes/emissions.ts
 import express from "express";
 import { submitEmission, getUserEmissions } from "../controllers/emissionsController";
 import { authenticateJWT } from "../middleware/auth";
 
 const router = express.Router();
 
-// @route POST /api/emissions/submit
-// @desc  Submit a new emission record
-// @access Protected
-router.post("/submit", authenticateJWT, submitEmission);
 
-// @route GET /api/emissions/my
-// @desc  Get logged-in user's emission records
-// @access Protected
-router.get("/my", authenticateJWT, getUserEmissions);
+router.post("/submit", authenticateJWT, submitEmission);  // POST /api/emissions/submit
+
+
+router.get("/my", authenticateJWT, getUserEmissions);  // GET /api/emissions/my
 
 export default router;
 

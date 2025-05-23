@@ -1,5 +1,3 @@
-// server/controllers/emissionsController.ts
-//import Emission from "../models/Emission";
 import Emission from "../models/Emission";
 export const submitEmission = async (req: any, res: any) => {
   const { fuel, electricity, waste } = req.body;
