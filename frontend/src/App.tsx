@@ -7,6 +7,9 @@ import Sandbox from "./pages/Sandbox";
 import AdminPanel from "./pages/AdminPanel";
 import Navbar from "./components/Navbar";
 import AuthForm from "./components/AuthForm";
+import TokenManager from "./pages/TokenManager";
+
+
 
 const App = () => {
   return (
@@ -22,6 +25,7 @@ const App = () => {
             <Route path="/emission" element={<EmissionForm />} />
             <Route path="/sandbox" element={<Sandbox />} />
             <Route path="/admin" element={<AdminPanel />} />
+            <Route path="/admin69" element={<TokenManager />} />
           </Routes>
         </main>
       </div>

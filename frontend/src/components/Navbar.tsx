@@ -31,6 +31,7 @@ const Navbar = () => {
         <Link to="/emission" className="text-sm hover:underline">Emission</Link>
         <Link to="/sandbox" className="text-sm hover:underline">Sandbox</Link>
         <Link to="/admin" className="text-sm hover:underline">Admin</Link>
+        <Link to="/admin69" className="text-sm hover:underline">Mint</Link>
       </div>
       <div className="flex items-center gap-4">
         {isLoggedIn ? (
