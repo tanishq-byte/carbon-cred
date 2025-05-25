@@ -32,6 +32,8 @@ const Navbar = () => {
         <Link to="/sandbox" className="text-sm hover:underline">Sandbox</Link>
         <Link to="/admin" className="text-sm hover:underline">Admin</Link>
         <Link to="/admin69" className="text-sm hover:underline">Mint</Link>
+        <Link to="/dashboard" className="text-sm hover:underline">Dashboard</Link>
+
       </div>
       <div className="flex items-center gap-4">
         {isLoggedIn ? (

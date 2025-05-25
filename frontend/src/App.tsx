@@ -8,6 +8,7 @@ import AdminPanel from "./pages/AdminPanel";
 import Navbar from "./components/Navbar";
 import AuthForm from "./components/AuthForm";
 import TokenManager from "./pages/TokenManager";
+import Dashboard from "./pages/Dashboard"
 
 
 
@@ -26,6 +27,7 @@ const App = () => {
             <Route path="/sandbox" element={<Sandbox />} />
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/admin69" element={<TokenManager />} />
+            <Route path="/dashboard" element={<Dashboard />} />
           </Routes>
         </main>
       </div>
