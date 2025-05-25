@@ -17,7 +17,7 @@ interface Token {
   timestamp: string;
 }
 
-const Dashboard = () => {
+const MyEmission = () => {
   const [emissions, setEmissions] = useState<Emission[]>([]);
   const [tokens, setTokens] = useState<Token[]>([]);
   const [role, setRole] = useState<string | null>(null);
@@ -93,4 +93,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default MyEmission;

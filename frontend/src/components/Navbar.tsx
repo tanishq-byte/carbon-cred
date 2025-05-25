@@ -26,7 +26,7 @@ const Navbar = () => {
       <div className="flex items-center gap-4">
         <h1 className="text-xl font-bold text-green-600">🌱 CarbonCred</h1>
         <Link to="/" className="text-sm hover:underline">Home</Link>
-        <Link to="/dashboard" className="text-sm hover:underline">Dashboard</Link>
+        <Link to="/MyEmission" className="text-sm hover:underline">My Emissions</Link>
         <Link to="/marketplace" className="text-sm hover:underline">Marketplace</Link>
         <Link to="/emission" className="text-sm hover:underline">Emission</Link>
         <Link to="/sandbox" className="text-sm hover:underline">Sandbox</Link>
