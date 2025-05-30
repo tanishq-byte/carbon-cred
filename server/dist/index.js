@@ -12,7 +12,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-// server/index.ts
 const express_1 = __importDefault(require("express"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const dotenv_1 = __importDefault(require("dotenv"));
@@ -22,7 +21,7 @@ const emission_1 = __importDefault(require("./routes/emission"));
 const tokens_1 = __importDefault(require("./routes/tokens"));
 const admin_1 = __importDefault(require("./routes/admin"));
 const auth_2 = require("./middleware/auth");
-dotenv_1.default.config(); // Load .env variables
+dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGODB_URI || "";
@@ -30,24 +29,19 @@ if (!MONGO_URI || !process.env.JWT_SECRET || !PORT) {
     console.error("❌ Missing required environment variables.");
     process.exit(1);
 }
-// Global middlewares
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
-// Optional: Log all incoming requests
 app.use((req, res, next) => {
     console.log(`${req.method} ${req.url}`);
     next();
 });
-// Routes
 app.use("/api/auth", auth_1.default);
 app.use("/api/emissions", auth_2.authenticateJWT, emission_1.default);
 app.use("/api/tokens", auth_2.authenticateJWT, tokens_1.default);
 app.use("/api/admin", auth_2.authenticateJWT, admin_1.default);
-// debug
 console.log("PORT:", PORT);
 console.log("MONGO_URI:", MONGO_URI ? "✓" : "❌ MISSING");
 console.log("JWT_SECRET:", process.env.JWT_SECRET ? "✓" : "❌ MISSING");
-// 👇 ADD THIS 👇
 app.get('/', (req, res) => {
     res.send('🚀 Hello from your DATABASE!');
 });
