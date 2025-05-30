@@ -22,8 +22,8 @@ const TokenManager = () => {
   const [transferLoading, setTransferLoading] = useState(false);
 
   // Example contract address and ABI (replace with your actual contract)
-  const CONTRACT_ADDRESS = '0x7d55594F1A8461fDeb5112a695DEF999De47b37b'; // Replace with your token contract
-  const ADMIN_ADDRESS = '0xeB5b1E1fE3692A92a891F76Dac2bDf83B43a4F8d'; // Replace with admin address
+  const CONTRACT_ADDRESS = '0x8B34711A4CE9365F9b0DBF23f6083f3A02B8E3ed'; // Replace with your token contract
+  const ADMIN_ADDRESS = '0xE3BDe23659B97D4Ef24ca90048B495407BC3E5dF'; // Replace with admin address
   
   // Minimal ERC-20 ABI with mint and burn functions
   const TOKEN_ABI = [

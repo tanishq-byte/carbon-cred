@@ -13,8 +13,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getUserEmissions = exports.submitEmission = void 0;
-// server/controllers/emissionsController.ts
-//import Emission from "../models/Emission";
 const Emission_1 = __importDefault(require("../models/Emission"));
 const submitEmission = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { fuel, electricity, waste } = req.body;
