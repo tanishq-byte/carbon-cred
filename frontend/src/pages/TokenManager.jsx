@@ -22,8 +22,8 @@ const TokenManager = () => {
   const [transferLoading, setTransferLoading] = useState(false);
 
   // Example contract address and ABI (replace with your actual contract)
-  const CONTRACT_ADDRESS = '0x8B34711A4CE9365F9b0DBF23f6083f3A02B8E3ed'; // Replace with your token contract
-  const ADMIN_ADDRESS = '0xE3BDe23659B97D4Ef24ca90048B495407BC3E5dF'; // Replace with admin address
+  const CONTRACT_ADDRESS = '0x7d55594F1A8461fDeb5112a695DEF999De47b37b'; // Replace with your token contract
+  const ADMIN_ADDRESS = '0x101dCf99566A016c98B4a381c9Aee0B297fD82f5'; // Replace with admin address
   
   // Minimal ERC-20 ABI with mint and burn functions
   const TOKEN_ABI = [
@@ -146,14 +146,21 @@ const TokenManager = () => {
       addTransaction('error', 'Only admin can mint tokens');
       return;
     }
-
+  
     if (!mintAmount || !mintRecipient) {
       addTransaction('error', 'Please fill in all mint fields');
       return;
     }
-
+  
+    if (parseFloat(mintAmount) <= 0) {
+      addTransaction('error', 'Mint amount must be greater than zero');
+      return;
+    }
+  
     setMintLoading(true);
+  
     try {
+      // Send mint transaction to smart contract
       const txHash = await window.ethereum.request({
         method: 'eth_sendTransaction',
         params: [{
@@ -162,12 +169,22 @@ const TokenManager = () => {
           data: encodeFunction('mint', [mintRecipient, parseFloat(mintAmount)])
         }]
       });
-
-      addTransaction('success', `Mint transaction sent! ${parseFloat(mintAmount)} tokens to ${mintRecipient}`, txHash);
+  
+      // Log mint action to backend
+      await fetch('http://localhost:5000/api/mint/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mintAmount, mintRecipient })
+      });
+  
+      addTransaction(
+        'success',
+        `✅ Minted ${parseFloat(mintAmount)} tokens to ${mintRecipient.slice(0, 6)}...${mintRecipient.slice(-4)}`,
+        txHash
+      );
+  
       setMintAmount('');
       setMintRecipient('');
-      
-      // Refresh balance after a delay
       setTimeout(() => getTokenBalance(walletAddress), 3000);
     } catch (error) {
       addTransaction('error', `Mint failed: ${error.message}`);
@@ -175,6 +192,41 @@ const TokenManager = () => {
       setMintLoading(false);
     }
   };
+  
+  // const mintTokens = async () => {
+  //   if (!isAdmin) {
+  //     addTransaction('error', 'Only admin can mint tokens');
+  //     return;
+  //   }
+
+  //   if (!mintAmount || !mintRecipient) {
+  //     addTransaction('error', 'Please fill in all mint fields');
+  //     return;
+  //   }
+
+  //   setMintLoading(true);
+  //   try {
+  //     const txHash = await window.ethereum.request({
+  //       method: 'eth_sendTransaction',
+  //       params: [{
+  //         from: walletAddress,
+  //         to: CONTRACT_ADDRESS,
+  //         data: encodeFunction('mint', [mintRecipient, parseFloat(mintAmount)])
+  //       }]
+  //     });
+
+  //     addTransaction('success', `Mint transaction sent! ${parseFloat(mintAmount)} tokens to ${mintRecipient}`, txHash);
+  //     setMintAmount('');
+  //     setMintRecipient('');
+      
+  //     // Refresh balance after a delay
+  //     setTimeout(() => getTokenBalance(walletAddress), 3000);
+  //   } catch (error) {
+  //     addTransaction('error', `Mint failed: ${error.message}`);
+  //   } finally {
+  //     setMintLoading(false);
+  //   }
+  // };
 
   // Burn tokens
   const burnTokens = async () => {
@@ -321,7 +373,7 @@ const TokenManager = () => {
             {/* Token Operations */}
             <div className="space-y-6">
               {/* Mint Section */}
-              <div className={`bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 ${!isAdmin ? 'opacity-60' : ''}`}>
+              {/* <div className={`bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 ${!isAdmin ? 'opacity-60' : ''}`}>
                 <div className="flex items-center gap-3 mb-4">
                   <Coins className="text-green-400" size={24} />
                   <h3 className="text-white font-semibold text-lg">Mint Tokens</h3>
@@ -366,7 +418,54 @@ const TokenManager = () => {
                     <Coins size={20} />
                   </button>
                 </div>
-              </div>
+              </div> */}
+<div className={`bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 ${!isAdmin ? 'opacity-60' : ''}`}>
+  <div className="flex items-center gap-3 mb-4">
+    <Coins className="text-green-400" size={24} />
+    <h3 className="text-white font-semibold text-lg">Mint Tokens</h3>
+    <span className={`px-2 py-1 rounded text-xs ${isAdmin ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+      {isAdmin ? 'Admin Access' : 'Admin Only'}
+    </span>
+  </div>
+
+  {!isAdmin && (
+    <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+      <p className="text-yellow-400 text-sm">
+        ⚠️ Only admin wallet ({ADMIN_ADDRESS.slice(0, 6)}...{ADMIN_ADDRESS.slice(-4)}) can mint tokens
+      </p>
+    </div>
+  )}
+
+  <div className="space-y-4">
+    <input
+      type="text"
+      placeholder="Recipient address"
+      value={mintRecipient}
+      onChange={(e) => setMintRecipient(e.target.value)}
+      disabled={!isAdmin}
+      className="w-full p-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+    />
+
+    <input
+      type="number"
+      placeholder="Amount to mint"
+      value={mintAmount}
+      onChange={(e) => setMintAmount(e.target.value)}
+      disabled={!isAdmin}
+      className="w-full p-3 bg-white/5 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+    />
+
+    <button
+      onClick={mintTokens}
+      disabled={mintLoading || !isAdmin}
+      className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+    >
+      {mintLoading ? 'Minting...' : 'Mint Tokens'}
+      <Coins size={20} />
+    </button>
+  </div>
+</div>
+
 
               {/* Burn Section */}
               <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
