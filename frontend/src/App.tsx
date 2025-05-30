@@ -9,7 +9,7 @@ import Navbar from "./components/Navbar";
 import AuthForm from "./components/AuthForm";
 import TokenManager from "./pages/TokenManager";
 import Dashboard from "./pages/Dashboard"
-
+import Hehe from "./pages/Hehe"
 
 
 const App = () => {
@@ -28,6 +28,10 @@ const App = () => {
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/admin69" element={<TokenManager />} />
             <Route path="/dashboard" element={<Dashboard />} />
+
+            <Route path="/hehe" element={<Hehe />} />
+
+
           </Routes>
         </main>
       </div>
