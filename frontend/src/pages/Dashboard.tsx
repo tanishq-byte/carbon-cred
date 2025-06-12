@@ -17,11 +17,15 @@ import {
 
 // TypeScript interfaces
 interface MintEvent {
-  address: string;
-  amount: number;
-  txHash: string;
+  _id: string;
+  id: number;
+  type: string;
+  message: string;
+  hash: string;
   timestamp: string;
-  blockNumber: number;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
 }
 
 interface WalletStatus {
@@ -81,13 +85,14 @@ const Dashboard: React.FC = () => {
 
   // Helper functions
   const formatAddress = (address: string): string => {
+    if (!address) return '';
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
-
+  
   const formatAmount = (amount: number): string => {
-    return new Intl.NumberFormat('en-US').format(amount);
+    return amount.toFixed(2);
   };
-
+  
   const formatDate = (timestamp: string): string => {
     return new Date(timestamp).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -97,9 +102,26 @@ const Dashboard: React.FC = () => {
       minute: '2-digit'
     });
   };
+  // const formatAddress = (address: string): string => {
+  //   return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  // };
+
+  // const formatAmount = (amount: number): string => {
+  //   return new Intl.NumberFormat('en-US').format(amount);
+  // };
+
+  // const formatDate = (timestamp: string): string => {
+  //   return new Date(timestamp).toLocaleDateString('en-US', {
+  //     year: 'numeric',
+  //     month: 'short',
+  //     day: 'numeric',
+  //     hour: '2-digit',
+  //     minute: '2-digit'
+  //   });
+  // };
 
   const getEtherscanLink = (txHash: string): string => {
-    return `https://etherscan.io/tx/${txHash}`;
+    return `https://sepolia.etherscan.io/tx/${txHash}`;
   };
 
   // Check if wallet is already connected on page load
@@ -180,68 +202,91 @@ const Dashboard: React.FC = () => {
     window.location.reload();
   };
 
-  const fetchMintEvents = useCallback(async (): Promise<void> => {
-    if (!walletStatus.connected) return;
+  // const fetchMintEvents = useCallback(async (): Promise<void> => {
+  //   if (!walletStatus.connected) return;
     
+  //   setLoading(true);
+    
+  //   try {
+  //     // In a real implementation, you would:
+  //     // 1. Get past events using eth_getLogs
+  //     // 2. Decode the event data
+  //     // 3. Format the response
+      
+  //     // Mock implementation with realistic data
+  //     const mockEvents: MintEvent[] = [
+  //       {
+  //         address: "0x742d35Cc6634C0532925a3b8D57D3aE4a3F5e8B5",
+  //         amount: 1000,
+  //         txHash: "0xa1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456",
+  //         timestamp: new Date(Date.now() - 86400000 * 1).toISOString(),
+  //         blockNumber: 18500000
+  //       },
+  //       {
+  //         address: "0x8ba1f109551bD432803012645Hac136c54c45f",
+  //         amount: 2500,
+  //         txHash: "0xb2c3d4e5f6789012345678901234567890abcdef1234567890abcdef1234567",
+  //         timestamp: new Date(Date.now() - 86400000 * 2).toISOString(),
+  //         blockNumber: 18499500
+  //       },
+  //       {
+  //         address: "0x147d35Cc6634C0532925a3b8D57D3aE4a3F5e8B5",
+  //         amount: 500,
+  //         txHash: "0xc3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678",
+  //         timestamp: new Date(Date.now() - 86400000 * 3).toISOString(),
+  //         blockNumber: 18499000
+  //       },
+  //       {
+  //         address: "0x9ba1f109551bD432803012645Hac136c54c45f",
+  //         amount: 3000,
+  //         txHash: "0xd4e5f6789012345678901234567890abcdef1234567890abcdef123456789",
+  //         timestamp: new Date(Date.now() - 86400000 * 5).toISOString(),
+  //         blockNumber: 18498000
+  //       },
+  //       {
+  //         address: "0x247d35Cc6634C0532925a3b8D57D3aE4a3F5e8B5",
+  //         amount: 750,
+  //         txHash: "0xe5f6789012345678901234567890abcdef1234567890abcdef1234567890",
+  //         timestamp: new Date(Date.now() - 86400000 * 7).toISOString(),
+  //         blockNumber: 18497000
+  //       }
+  //     ];
+
+  //     setMintEvents(mockEvents);
+  //     setFilteredEvents(mockEvents);
+  //     setLastSync(new Date());
+      
+  //   } catch (error) {
+  //     console.error('Failed to fetch mint events:', error);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // }, [walletStatus.connected]);
+
+  // Filter events based on current filter state
+  
+  const fetchMintEvents = useCallback(async (): Promise<void> => {
     setLoading(true);
     
     try {
-      // In a real implementation, you would:
-      // 1. Get past events using eth_getLogs
-      // 2. Decode the event data
-      // 3. Format the response
+      const response = await fetch('http://localhost:8000/api/transactions');
+      if (!response.ok) {
+        throw new Error('Failed to fetch transactions');
+      }
       
-      // Mock implementation with realistic data
-      const mockEvents: MintEvent[] = [
-        {
-          address: "0x742d35Cc6634C0532925a3b8D57D3aE4a3F5e8B5",
-          amount: 1000,
-          txHash: "0xa1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456",
-          timestamp: new Date(Date.now() - 86400000 * 1).toISOString(),
-          blockNumber: 18500000
-        },
-        {
-          address: "0x8ba1f109551bD432803012645Hac136c54c45f",
-          amount: 2500,
-          txHash: "0xb2c3d4e5f6789012345678901234567890abcdef1234567890abcdef1234567",
-          timestamp: new Date(Date.now() - 86400000 * 2).toISOString(),
-          blockNumber: 18499500
-        },
-        {
-          address: "0x147d35Cc6634C0532925a3b8D57D3aE4a3F5e8B5",
-          amount: 500,
-          txHash: "0xc3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678",
-          timestamp: new Date(Date.now() - 86400000 * 3).toISOString(),
-          blockNumber: 18499000
-        },
-        {
-          address: "0x9ba1f109551bD432803012645Hac136c54c45f",
-          amount: 3000,
-          txHash: "0xd4e5f6789012345678901234567890abcdef1234567890abcdef123456789",
-          timestamp: new Date(Date.now() - 86400000 * 5).toISOString(),
-          blockNumber: 18498000
-        },
-        {
-          address: "0x247d35Cc6634C0532925a3b8D57D3aE4a3F5e8B5",
-          amount: 750,
-          txHash: "0xe5f6789012345678901234567890abcdef1234567890abcdef1234567890",
-          timestamp: new Date(Date.now() - 86400000 * 7).toISOString(),
-          blockNumber: 18497000
-        }
-      ];
-
-      setMintEvents(mockEvents);
-      setFilteredEvents(mockEvents);
+      const data = await response.json();
+      setMintEvents(data);
+      setFilteredEvents(data);
       setLastSync(new Date());
       
     } catch (error) {
-      console.error('Failed to fetch mint events:', error);
+      console.error('Failed to fetch transactions:', error);
+      // Optionally show error to user
     } finally {
       setLoading(false);
     }
-  }, [walletStatus.connected]);
-
-  // Filter events based on current filter state
+  }, []);
+  
   const applyFilters = useCallback((): void => {
     let filtered = [...mintEvents];
 
@@ -284,12 +329,39 @@ const Dashboard: React.FC = () => {
 
 
   // Calculate statistics
+  // const getStatistics = () => {
+  //   const totalMinted = filteredEvents.reduce((sum, event) => sum + event.amount, 0);
+  //   const uniqueAddresses = new Set(filteredEvents.map(event => event.address)).size;
+  //   const totalTransactions = filteredEvents.length;
+  //   const avgMintAmount = totalTransactions > 0 ? totalMinted / totalTransactions : 0;
+
+  //   return {
+  //     totalMinted,
+  //     uniqueAddresses,
+  //     totalTransactions,
+  //     avgMintAmount
+  //   };
+  // };
+
   const getStatistics = () => {
-    const totalMinted = filteredEvents.reduce((sum, event) => sum + event.amount, 0);
-    const uniqueAddresses = new Set(filteredEvents.map(event => event.address)).size;
+    // Extract amounts from messages (assuming format "Minted X.XX tokens to...")
+    const amounts = filteredEvents.map(event => {
+      const match = event.message.match(/Minted (\d+\.\d+) tokens/);
+      return match ? parseFloat(match[1]) : 0;
+    });
+  
+    const totalMinted = amounts.reduce((sum, amount) => sum + amount, 0);
     const totalTransactions = filteredEvents.length;
     const avgMintAmount = totalTransactions > 0 ? totalMinted / totalTransactions : 0;
-
+  
+    // Extract unique addresses (assuming format "Minted ... to 0x7EAe...2b4A")
+    const uniqueAddresses = new Set(
+      filteredEvents.map(event => {
+        const match = event.message.match(/to (0x[a-fA-F0-9]{4}\.\.\.[a-fA-F0-9]{4})/);
+        return match ? match[1] : '';
+      })
+    ).size;
+  
     return {
       totalMinted,
       uniqueAddresses,
@@ -515,14 +587,14 @@ const Dashboard: React.FC = () => {
             
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-800/50">
-                  <tr>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Recipient Address</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Amount</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Date</th>
-                    <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Transaction</th>
-                  </tr>
-                </thead>
+              <thead className="bg-gray-800/50">
+                <tr>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Transaction ID</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Details</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Time</th>
+                  <th className="text-left px-6 py-4 text-sm font-medium text-gray-400">Transaction Hash</th>
+                </tr>
+              </thead>
                 <tbody className="divide-y divide-white/10">
                   {loading ? (
                     <tr>
@@ -541,32 +613,32 @@ const Dashboard: React.FC = () => {
                       </td>
                     </tr>
                   ) : (
-                    getPaginatedEvents().map((event, index) => (
-                      <tr key={`${event.txHash}-${index}`} className="hover:bg-white/5 transition-colors">
+                    getPaginatedEvents().map((event) => (
+                      <tr key={event._id} className="hover:bg-white/5 transition-colors">
+                        <td className="px-6 py-4 font-mono text-sm">
+                          {event.id}
+                        </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center space-x-2">
-                            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-xs font-bold">
-                              {event.address.slice(2, 4).toUpperCase()}
-                            </div>
-                            <span className="font-mono text-sm">{formatAddress(event.address)}</span>
+                            {event.type === 'success' ? (
+                              <CheckCircle2 className="w-4 h-4 text-green-400" />
+                            ) : (
+                              <AlertCircle className="w-4 h-4 text-red-400" />
+                            )}
+                            <span>{event.message}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <span className="text-green-400 font-semibold">
-                            {formatAmount(event.amount)} tokens
-                          </span>
-                        </td>
                         <td className="px-6 py-4 text-gray-300">
-                          {formatDate(event.timestamp)}
+                          {formatDate(event.createdAt)}
                         </td>
                         <td className="px-6 py-4">
                           <a 
-                            href={getEtherscanLink(event.txHash)}
+                            href={`https://sepolia.etherscan.io/tx/${event.hash}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center space-x-1 text-blue-400 hover:text-blue-300 transition-colors"
                           >
-                            <span className="font-mono text-sm">{formatAddress(event.txHash)}</span>
+                            <span className="font-mono text-sm">{formatAddress(event.hash)}</span>
                             <ExternalLink className="w-4 h-4" />
                           </a>
                         </td>
