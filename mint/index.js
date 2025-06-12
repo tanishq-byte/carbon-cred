@@ -4,10 +4,11 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 
 import mintRoutes from './routes/mint.js';
+import transactionRoutes from './routes/transactionRoutes.js';
 
 dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8000;
 const MONGO_URI = process.env.MONGODB_URI;
 
 // Middleware
@@ -16,6 +17,8 @@ app.use(express.json());
 
 // Routes
 app.use("/api/mint", mintRoutes);
+app.use('/api/transactions', transactionRoutes);
+
 
 // Default Route
 app.get("/", (req, res) => {

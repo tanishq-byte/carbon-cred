@@ -14,35 +14,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.loginUser = exports.registerUser = void 0;
 const User_1 = __importDefault(require("../models/User"));
-const { sendWelcomeEmail } = require('../utils/sendEmail');
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-// const registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-//     const { email, password, role } = req.body;
-//     try {
-//         const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
-//         const user = yield User_1.default.create({ email, password: hashedPassword, role });
-//         res.status(201).json({ message: "User created", user });
-//     }
-//     catch (err) {
-//         const error = err;
-//         res.status(400).json({ error: error.message });
-//     }
-// });
-
 const registerUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { email, password, role } = req.body;
     try {
         const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
         const user = yield User_1.default.create({ email, password: hashedPassword, role });
-
-        // Send welcome email
-        const subject = "🎉 Welcome to Our Platform!";
-        const html = `<h1>Welcome!</h1><p>Thanks for registering with us, ${email}!</p>`;
-        yield sendWelcomeEmail([email], subject, html);
-
-        res.status(201).json({ message: "User created and welcome email sent", user });
-    } catch (err) {
+        res.status(201).json({ message: "User created", user });
+    }
+    catch (err) {
         const error = err;
         res.status(400).json({ error: error.message });
     }

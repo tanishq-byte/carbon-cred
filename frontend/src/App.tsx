@@ -26,7 +26,7 @@ const App = () => {
             <Route path="/emission" element={<EmissionForm />} />
             <Route path="/sandbox" element={<Sandbox />} />
             <Route path="/admin" element={<AdminPanel />} />
-            <Route path="/admin69" element={<TokenManager />} />
+            <Route path="/mint" element={<TokenManager />} />
             <Route path="/dashboard" element={<Dashboard />} />
 
             <Route path="/hehe" element={<Hehe />} />

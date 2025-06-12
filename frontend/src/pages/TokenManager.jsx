@@ -1,7 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { Wallet, Coins, Send, Flame, AlertCircle, CheckCircle } from 'lucide-react';
 
+
 const TokenManager = () => {
+  // previous data
+  const [prevtransactions, setPrevtransactions] = useState([]);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // const response = await fetch('http://localhost:8000/api/mint/all');
+        const response = await fetch('http://localhost:8000/api/transactions');
+
+        const data = await response.json();
+        setPrevtransactions(data);
+      } catch (error) {
+        console.error('Error fetching mint transactions:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+
+  // with reciept
+  const [recprevtransactions, setrecPrevtransactions] = useState([]);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // const response = await fetch('http://localhost:8000/api/mint/all');
+        const response = await fetch('http://localhost:8000/api/mint/all');
+
+        const data = await response.json();
+        setrecPrevtransactions(data);
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
   // State management
   const [walletAddress, setWalletAddress] = useState('');
   const [isConnected, setIsConnected] = useState(false);
@@ -23,7 +60,7 @@ const TokenManager = () => {
 
   // Example contract address and ABI (replace with your actual contract)
   const CONTRACT_ADDRESS = '0x7d55594F1A8461fDeb5112a695DEF999De47b37b'; // Replace with your token contract
-  const ADMIN_ADDRESS = '0x101dCf99566A016c98B4a381c9Aee0B297fD82f5'; // Replace with admin address
+  const ADMIN_ADDRESS = '0x7EAeBf6b4758F3d10797C1eDa7999A1aec292b4A'; // Replace with admin address
   
   // Minimal ERC-20 ABI with mint and burn functions
   const TOKEN_ABI = [
@@ -127,18 +164,54 @@ const TokenManager = () => {
     
     return data;
   };
+// -----------------------------------------
+  // // Add transaction to history
+  // const addTransaction = (type, message, hash = null) => {
+  //   const transaction = {
+  //     id: Date.now(),
+  //     type,
+  //     message,
+  //     hash,
+  //     timestamp: new Date().toLocaleTimeString()
+  //   };
+  //   setTransactions(prev => [transaction, ...prev.slice(0, 9)]); // Keep last 10 transactions
+  // };
+// -----------------------------------------
 
-  // Add transaction to history
-  const addTransaction = (type, message, hash = null) => {
+   // Add transaction to history
+   const addTransaction = async (type, message, hash = null) => {
     const transaction = {
       id: Date.now(),
       type,
       message,
       hash,
-      timestamp: new Date().toLocaleTimeString()
+      timestamp: new Date().toLocaleTimeString(),
     };
-    setTransactions(prev => [transaction, ...prev.slice(0, 9)]); // Keep last 10 transactions
+  
+    // Save to state (frontend)
+    setTransactions(prev => [transaction, ...prev.slice(0, 9)]);
+  
+    // Save to backend
+    try {
+      const response = await fetch('http://localhost:8000/api/transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(transaction),
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+  
+      const savedTx = await response.json();
+      console.log('Transaction saved to backend:', savedTx);
+    } catch (err) {
+      console.error('Failed to save transaction:', err.message);
+    }
   };
+  
 
   // Mint tokens (admin only)
   const mintTokens = async () => {
@@ -171,7 +244,7 @@ const TokenManager = () => {
       });
   
       // Log mint action to backend
-      await fetch('http://localhost:5000/api/mint/submit', {
+      await fetch('http://localhost:8000/api/mint/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mintAmount, mintRecipient })
@@ -527,7 +600,7 @@ const TokenManager = () => {
 
             {/* Transaction History */}
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-              <h3 className="text-white font-semibold text-lg mb-4">Transaction History</h3>
+             <h3 className="text-white font-semibold text-lg mb-4">Transaction History</h3>
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {transactions.length === 0 ? (
                   <p className="text-gray-400 text-center py-8">No transactions yet</p>
@@ -550,7 +623,7 @@ const TokenManager = () => {
                             <span className="text-gray-400 text-xs">{tx.timestamp}</span>
                             {tx.hash && (
                               <a
-                                href={`https://etherscan.io/tx/${tx.hash}`}
+                                href={`https://sepolia.etherscan.io/tx/${tx.hash}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-blue-400 hover:text-blue-300 text-xs underline"
@@ -564,7 +637,97 @@ const TokenManager = () => {
                     </div>
                   ))
                 )}
+             </div>
+
+
+            
+             <div className="p-4">
+             <h2 className="text-lg font-bold mb-2">Previous Mint Transactions</h2>
+              
+
+                {prevtransactions.length === 0 ? (
+                    <p className="text-gray-400 text-center py-8">No transactions yet</p>
+                  ) : (
+                    prevtransactions.map((tx) => (
+                      <div
+                        key={tx._id}
+                        className={`p-3 rounded-lg border-l-4 ${
+                          tx.type === 'success'
+                            ? 'bg-green-500/10 border-green-500'
+                            : 'bg-red-500/10 border-red-500'
+                        } mb-3`}
+                      >
+                        <div className="flex items-start gap-2">
+                          {tx.type === 'success' ? (
+                            <CheckCircle className="text-green-400 flex-shrink-0 mt-0.5" size={16} />
+                          ) : (
+                            <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" size={16} />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white text-sm">{tx.message}</p>
+                            <div className="flex items-center justify-between mt-1">
+                              <span className="text-gray-400 text-xs">
+                                {new Date(tx.createdAt).toLocaleString()}
+                              </span>
+                              {tx.hash && (
+                                <a
+                                  href={`https://sepolia.etherscan.io/tx/${tx.hash}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-400 hover:text-blue-300 text-xs underline"
+                                >
+                                  View TX
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )
+                }
+
+
+
+
+{/* reciept */}
+          <h2 className="text-lg font-bold mb-2">Previous Mint Transactions Reciept</h2>
+          <div className="p-4">
+                {recprevtransactions.length === 0 ? (
+                  <p className="text-gray-400 text-center py-8">No transactions yet</p>
+                ) : (
+                  recprevtransactions.map((tx) => (
+                    <div
+                      key={tx._id}
+                      className={`p-3 rounded-lg border-l-4 bg-green-500/10 border-green-500 mb-3`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <CheckCircle className="text-green-400 flex-shrink-0 mt-0.5" size={16} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-sm">
+                            Minted <strong>{tx.mintAmount}</strong> tokens to{' '}
+                            <span className="text-blue-300">{tx.mintRecipient}</span>
+                          </p>
+                          <div className="flex items-center justify-between mt-1">
+                            <span className="text-gray-400 text-xs">
+                              {new Date(tx.createdAt).toLocaleString()}
+                            </span>
+                            {/* Optional: Add View TX link if hash is present */}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
+
+            </div>
+
+
+ 
+
+
+ 
             </div>
           </div>
         )}

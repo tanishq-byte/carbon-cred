@@ -74,7 +74,7 @@ const Navbar = () => {
             <NavLink to="/emission">Emission</NavLink>
             <NavLink to="/sandbox">Sandbox</NavLink>
             <NavLink to="/admin">Admin</NavLink>
-            <NavLink to="/admin69">Mint</NavLink>
+            <NavLink to="/mint">Mint</NavLink>
             <NavLink to="/dashboard">Dashboard</NavLink>
             <NavLink to="/hehe">Hehe</NavLink>
           </div>
