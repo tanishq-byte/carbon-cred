@@ -344,9 +344,9 @@ const Dashboard: React.FC = () => {
   // };
 
   const getStatistics = () => {
-    // Extract amounts from messages (assuming format "Minted X.XX tokens to...")
+    // Extract amounts from messages (format: "✅ Minted X.XX tokens to...")
     const amounts = filteredEvents.map(event => {
-      const match = event.message.match(/Minted (\d+\.\d+) tokens/);
+      const match = event.message.match(/Minted (\d+\.?\d*) tokens/);
       return match ? parseFloat(match[1]) : 0;
     });
   
@@ -354,7 +354,7 @@ const Dashboard: React.FC = () => {
     const totalTransactions = filteredEvents.length;
     const avgMintAmount = totalTransactions > 0 ? totalMinted / totalTransactions : 0;
   
-    // Extract unique addresses (assuming format "Minted ... to 0x7EAe...2b4A")
+    // Extract unique addresses from messages (format: "to 0x...")
     const uniqueAddresses = new Set(
       filteredEvents.map(event => {
         const match = event.message.match(/to (0x[a-fA-F0-9]{4}\.\.\.[a-fA-F0-9]{4})/);
@@ -369,6 +369,33 @@ const Dashboard: React.FC = () => {
       avgMintAmount
     };
   };
+
+  // const getStatistics = () => {
+  //   // Extract amounts from messages (assuming format "Minted X.XX tokens to...")
+  //   const amounts = filteredEvents.map(event => {
+  //     const match = event.message.match(/Minted (\d+\.\d+) tokens/);
+  //     return match ? parseFloat(match[1]) : 0;
+  //   });
+  
+  //   const totalMinted = amounts.reduce((sum, amount) => sum + amount, 0);
+  //   const totalTransactions = filteredEvents.length;
+  //   const avgMintAmount = totalTransactions > 0 ? totalMinted / totalTransactions : 0;
+  
+  //   // Extract unique addresses (assuming format "Minted ... to 0x7EAe...2b4A")
+  //   const uniqueAddresses = new Set(
+  //     filteredEvents.map(event => {
+  //       const match = event.message.match(/to (0x[a-fA-F0-9]{4}\.\.\.[a-fA-F0-9]{4})/);
+  //       return match ? match[1] : '';
+  //     })
+  //   ).size;
+  
+  //   return {
+  //     totalMinted,
+  //     uniqueAddresses,
+  //     totalTransactions,
+  //     avgMintAmount
+  //   };
+  // };
 
   // Pagination
   const getPaginatedEvents = () => {
