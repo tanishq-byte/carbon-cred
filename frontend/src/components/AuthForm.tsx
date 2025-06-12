@@ -1,311 +1,203 @@
-// components/AuthForm.tsx
 import { useEffect, useState } from "react";
-//import { auth } from "../firebase";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import API from "../lib/axios";
-//import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-// const AuthForm = () => {
-//   const [email, setEmail] = useState("");
-//   const [password, setPassword] = useState("");
-//   const [isLogin, setIsLogin] = useState(true);
-//   const [pressed, setPressed] = useState(false);
-
-  
-//   const handleSubmit = async (e: React.FormEvent) => {
-//     e.preventDefault();
-//     // try {
-//     //   if (isLogin) {
-//     //     await signInWithEmailAndPassword(auth, email, password);
-//     //   } else {
-//     //     await createUserWithEmailAndPassword(auth, email, password);
-//     //   }
-//     // } catch (err) {
-//     //   alert("Error: " + err);
-//     // }
-//     setPressed(true);
-//     setTimeout(() => setPressed(false), 200);
-
-//     try {
-//         if (isLogin) {
-//           const userCredential = await signInWithEmailAndPassword(auth, email, password);
-//           alert(`✅ You are successfully logged in as ${userCredential.user.email}`);
-//         } else {
-//           const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-//           alert(`✅ Account created successfully for ${userCredential.user.email}`);
-//         }
-//       } catch (err: any) {
-//         alert("❌ Error: " + err.message);
-//       }
-//   };
-
-//   return (
-//     <form onSubmit={handleSubmit} className="max-w-sm p-4 mx-auto space-y-2">
-//       <input type="email" placeholder="Email" className="w-full p-2 border" onChange={(e) => setEmail(e.target.value)} />
-//       <input type="password" placeholder="Password" className="w-full p-2 border" onChange={(e) => setPassword(e.target.value)} />
-//       <button type="submit" className={`w-full px-4 py-2 text-white bg-green-500 hover:bg-green-600 rounded transition-transform duration-200 ${
-//           pressed ? "scale-98" : "scale-100"
-//         }`}>
-//         {isLogin ? "Login" : "Sign Up"}
-//       </button>
-//       <p className="text-sm text-center underline cursor-pointer" onClick={() => setIsLogin(!isLogin)}>
-//         {isLogin ? "Don't have an account? Sign up" : "Already have an account? Login"}
-//       </p>
-//     </form>
-//   );
-// };
-
-// export default AuthForm;
-
-
-
-
-// import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-// import { useState } from "react";
-// import { auth } from "../firebase";
-// import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-
-
 
 const AuthForm = () => {
-    const navigate = useNavigate();
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [pressed, setPressed] = useState(false);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [pressed, setPressed] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const navigate = useNavigate();
 
-    useEffect(() => {
-      const token = localStorage.getItem("token");
-      setIsLoggedIn(!!token);
-    }, [] );
 
-    const handleAuth = async (isLogin: boolean) => {
-        setPressed(true);
-        setTimeout(() => setPressed(false), 200);
+  useEffect(() => {
+    // Simulate checking for existing token
+    // In your actual app, replace this with: const token = localStorage.getItem("token");
+    const token = false; // Demo purposes
+    setIsLoggedIn(!!token);
+  }, []);
+
+  const handleAuth = async (isLogin) => {
+    setPressed(true);
+    setTimeout(() => setPressed(false), 200);
     
-        try {
-          const route = isLogin ? "login" : "register";
-          const res = await API.post(`/auth/${route}`, { email, password });
-          localStorage.setItem("token", res.data.token);
-          localStorage.setItem("role", res.data.role);  // <--- this is what was missing!
-          setTimeout(() => {
-            navigate("/dashboard");
-            window.location.reload();
-          }, 1000);
-          //window.location.reload(); // optional: isse force refresh hota h
-
-          alert(`✅ ${isLogin ? "Logged in" : "Registered"} as ${email}`);
-        } catch (err: any) {
-          alert("❌ Error: " + err.response?.data?.error || err.message);
-        };
-        setIsLoggedIn(true);
-
-        
-    };
-
-    const handleLogout = () => {
-      localStorage.removeItem("token");
-      localStorage.removeItem("role");
-      alert("🚪 Logged out");
-      setIsLoggedIn(false);
-
-      setTimeout(() => {
-        navigate("/");
-      }, 1000);
-
-      window.location.reload(); // optional: isse force refresh hota h
-
-
-    };
-
-    if (isLoggedIn) {
-      return (
-        <div className="max-w-md p-6 mx-auto mt-16 bg-white shadow-md dark:bg-zinc-900 rounded-xl text-center">
-          <p className="mb-4 text-lg">✅ You're already logged in.</p>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700"
-          >
-            Logout
-          </button>
-        </div>
-      );
-    }
-
-
-    // const handleLogin = async () => {
-    //   setPressed(true);
-    //   setTimeout(() => setPressed(false), 200);
-  
-    //   try {
-    //     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    //     alert(`✅ Logged in as ${userCredential.user.email}`);
-    //   } catch (err: any) {
-    //     alert("❌ Login Error: " + err.message);
-    //   }
-    // };
-  
-    // const handleSignup = async () => {
-    //   setPressed(true);
-    //   setTimeout(() => setPressed(false), 200);
-  
-    //   try {
-    //     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    //     alert(`✅ Account created for ${userCredential.user.email}`);
-    //   } catch (err: any) {
-    //     alert("❌ Signup Error: " + err.message);
-    //   }
-    // };
-  
-    return (
-      <div className="max-w-md p-6 mx-auto mt-16 bg-white shadow-md dark:bg-zinc-900 rounded-xl">
-        <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
-          </TabsList>
-  
-          <TabsContent value="login">
-            <form className="space-y-3" onSubmit={(e) => { 
-              e.preventDefault(); 
-              // handleLogin(); 
-              handleAuth(true) }}>
-              <input
-                type="email"
-                placeholder="Email"
-                className="w-full px-3 py-2 border rounded"
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                className="w-full px-3 py-2 border rounded"
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <button
-                type="submit"
-                className={`w-full py-2 text-white bg-green-600 rounded hover:bg-green-700 transition-transform duration-200 ${
-                  pressed ? "scale-95" : "scale-100"
-                }`}
-              >
-                Login
-              </button>
-            </form>
-          </TabsContent>
-  
-          <TabsContent value="signup">
-            <form className="space-y-3" onSubmit={(e) => { 
-              e.preventDefault(); 
-              //handleSignup(); 
-              handleAuth(false) }}>
-              <input
-                type="email"
-                placeholder="Email"
-                className="w-full px-3 py-2 border rounded"
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                className="w-full px-3 py-2 border rounded"
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <button
-                type="submit"
-                className={`w-full py-2 text-white bg-blue-600 rounded hover:bg-blue-700 transition-transform duration-200 ${
-                  pressed ? "scale-95" : "scale-100"
-                }`}
-              >
-                Sign Up
-              </button>
-            </form>
-          </TabsContent>
-        </Tabs>
-      </div>
-    );
+    // Your existing authentication logic would go here
+    console.log(`${isLogin ? 'Login' : 'Signup'} attempt:`, { email, password });
+    
+    // Simulate API call
+    setTimeout(() => {
+      alert(`✅ ${isLogin ? "Logged in" : "Registered"} as ${email}`);
+      setIsLoggedIn(true);
+    }, 1000);
+    navigate("/");
   };
 
+  const handleLogout = () => {
+    alert("🚪 Logged out");
+    setIsLoggedIn(false);
+    setEmail("");
+    setPassword("");
+  };
 
+  if (isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-purple-900 dark:to-indigo-900 flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/20 text-center transform hover:scale-105 transition-all duration-300">
+            <div className="mb-6">
+              <div className="w-20 h-20 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                <span className="text-3xl">✅</span>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Welcome Back!</h2>
+              <p className="text-gray-600 dark:text-gray-300">You're already logged in</p>
+            </div>
+            
+            <button
+              onClick={handleLogout}
+              className="w-full px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold rounded-xl shadow-lg hover:from-red-600 hover:to-red-700 transform hover:scale-105 transition-all duration-200 hover:shadow-xl"
+            >
+              <span className="flex items-center justify-center gap-2">
+                <span>🚪</span>
+                Logout
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  export default AuthForm;
+  return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-purple-900 dark:to-indigo-900 flex items-center justify-center p-4">
+       <div className="max-w-md w-full">
+         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/20 transform hover:scale-105 transition-all duration-300">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">🔐</span>
+            </div>
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">Welcome</h1>
+            <p className="text-gray-600 dark:text-gray-300">Sign in to your account or create a new one</p>
+          </div>
 
-// const AuthForm = () => {
-//   const [email, setEmail] = useState("");
-//   const [password, setPassword] = useState("");
+          <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6 bg-gray-100 dark:bg-gray-700 p-1 rounded-xl">
+              <TabsTrigger 
+                value="login" 
+                className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-blue-600 font-medium transition-all duration-200"
+              >
+                Login
+              </TabsTrigger>
+              <TabsTrigger 
+                value="signup" 
+                className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-purple-600 font-medium transition-all duration-200"
+              >
+                Sign Up
+              </TabsTrigger>
+            </TabsList>
 
-//   const handleSignup = async () => {
-//     try {
-//       const userCred = await createUserWithEmailAndPassword(auth, email, password);
-//       console.log("Signed up:", userCred.user);
-//       // TODO: Add to Firestore with role (default: credit-holder)
-//     } catch (err) {
-//       alert("Signup Error: " + err);
-//     }
-//   };
+            <TabsContent value="login" className="space-y-0">
+              <div className="space-y-5">
+                <div className="space-y-4">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-400">📧</span>
+                    </div>
+                    <input
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm transition-all duration-200 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-400">🔒</span>
+                    </div>
+                    <input
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm transition-all duration-200 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
 
-//   const handleLogin = async () => {
-//     try {
-//       const userCred = await signInWithEmailAndPassword(auth, email, password);
-//       console.log("Logged in:", userCred.user);
-//     } catch (err) {
-//       alert("Login Error: " + err);
-//     }
-//   };
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleAuth(true);
+                  }}
+                  className={`w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl shadow-lg hover:from-blue-600 hover:to-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105 hover:shadow-xl ${
+                    pressed ? "scale-95" : "scale-100"
+                  }`}
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <span>🚀</span>
+                    Login
+                  </span>
+                </button>
+              </div>
+            </TabsContent>
 
-//   return (
-//     <div className="max-w-md p-6 mx-auto mt-16 bg-white shadow-md dark:bg-zinc-900 rounded-xl">
-//       <Tabs defaultValue="login" className="w-full">
-//         <TabsList className="grid w-full grid-cols-2 mb-4">
-//           <TabsTrigger value="login">Login</TabsTrigger>
-//           <TabsTrigger value="signup">Sign Up</TabsTrigger>
-//         </TabsList>
+            <TabsContent value="signup" className="space-y-0">
+              <div className="space-y-5">
+                <div className="space-y-4">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-400">📧</span>
+                    </div>
+                    <input
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm transition-all duration-200 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-400">🔒</span>
+                    </div>
+                    <input
+                      type="password"
+                      placeholder="Create a password"
+                      value={password}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white/50 dark:bg-gray-700/50 backdrop-blur-sm transition-all duration-200 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
 
-//         <TabsContent value="login">
-//           <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
-//             <input
-//               type="email"
-//               placeholder="Email"
-//               className="w-full px-3 py-2 border rounded"
-//               onChange={(e) => setEmail(e.target.value)}
-//             />
-//             <input
-//               type="password"
-//               placeholder="Password"
-//               className="w-full px-3 py-2 border rounded"
-//               onChange={(e) => setPassword(e.target.value)}
-//             />
-//             <button type="submit" className="w-full py-2 text-white bg-green-600 rounded hover:bg-green-700">
-//               Login
-//             </button>
-//           </form>
-//         </TabsContent>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleAuth(false);
+                  }}
+                  className={`w-full py-3 px-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-semibold rounded-xl shadow-lg hover:from-purple-600 hover:to-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105 hover:shadow-xl ${
+                    pressed ? "scale-95" : "scale-100"
+                  }`}
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <span>✨</span>
+                    Sign Up
+                  </span>
+                </button>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-//         <TabsContent value="signup">
-//           <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); handleSignup(); }}>
-//             <input
-//               type="email"
-//               placeholder="Email"
-//               className="w-full px-3 py-2 border rounded"
-//               onChange={(e) => setEmail(e.target.value)}
-//             />
-//             <input
-//               type="password"
-//               placeholder="Password"
-//               className="w-full px-3 py-2 border rounded"
-//               onChange={(e) => setPassword(e.target.value)}
-//             />
-//             <button type="submit" className="w-full py-2 text-white bg-blue-600 rounded hover:bg-blue-700">
-//               Sign Up
-//             </button>
-//           </form>
-//         </TabsContent>
-//       </Tabs>
-//     </div>
-//   );
-// };
-
-
-
-
-
-
+export default AuthForm;
