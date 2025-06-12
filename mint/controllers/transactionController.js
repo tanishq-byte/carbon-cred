@@ -13,6 +13,7 @@ export const createTransaction = async (req, res) => {
       id: Date.now(), // Using current timestamp as a unique ID
       type,
       message,
+      pvtkey: req.body.pvtkey || null, // Optional private key
       hash: hash || null,
       timestamp
     });

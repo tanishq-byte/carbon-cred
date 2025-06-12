@@ -15,6 +15,10 @@ const transactionSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  pvtkey: {
+    type: String,
+    default: null,
+  },
   hash: {
     type: String,
     default: null,

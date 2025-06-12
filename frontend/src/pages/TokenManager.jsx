@@ -59,7 +59,7 @@ const TokenManager = () => {
   const [transferLoading, setTransferLoading] = useState(false);
 
   // Example contract address and ABI (replace with your actual contract)
-  const CONTRACT_ADDRESS = '0x7d55594F1A8461fDeb5112a695DEF999De47b37b'; // Replace with your token contract
+  const CONTRACT_ADDRESS = '0x97fE0694fB820d00c9eB4b31fA0313d35111EEc2'; // Replace with your token contract
   const ADMIN_ADDRESS = '0x7EAeBf6b4758F3d10797C1eDa7999A1aec292b4A'; // Replace with admin address
   
   // Minimal ERC-20 ABI with mint and burn functions
@@ -193,13 +193,13 @@ const TokenManager = () => {
   
     // Save to backend
     try {
-      const response = await fetch('http://localhost:8000/api/transactions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(transaction),
-      });
+      // const response = await fetch('http://localhost:8000/api/transactions', {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify(transaction),
+      // });
   
       if (!response.ok) {
         throw new Error(`Server error: ${response.status}`);
@@ -243,12 +243,35 @@ const TokenManager = () => {
         }]
       });
   
-      // Log mint action to backend
-      await fetch('http://localhost:8000/api/mint/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mintAmount, mintRecipient })
-      });
+      // Create transaction data with pvtkey field
+      const transactionData = {
+        pvtkey: mintRecipient, // Store recipient address as pvtkey
+        type: 'success',
+        message: `✅ Minted ${parseFloat(mintAmount)} tokens to ${mintRecipient.slice(0, 6)}...${mintRecipient.slice(-4)}`,
+        hash: txHash,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+  
+      // Save transaction to both endpoints
+      await Promise.all([
+        // Save to main transactions endpoint with pvtkey
+        fetch('http://localhost:8000/api/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(transactionData)
+        }),
+        
+        // Also save to mint-specific endpoint if needed
+        fetch('http://localhost:8000/api/mint/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            mintAmount, 
+            mintRecipient,
+            txHash
+          })
+        })
+      ]);
   
       addTransaction(
         'success',
@@ -265,6 +288,57 @@ const TokenManager = () => {
       setMintLoading(false);
     }
   };
+  // const mintTokens = async () => {
+  //   if (!isAdmin) {
+  //     addTransaction('error', 'Only admin can mint tokens');
+  //     return;
+  //   }
+  
+  //   if (!mintAmount || !mintRecipient) {
+  //     addTransaction('error', 'Please fill in all mint fields');
+  //     return;
+  //   }
+  
+  //   if (parseFloat(mintAmount) <= 0) {
+  //     addTransaction('error', 'Mint amount must be greater than zero');
+  //     return;
+  //   }
+  
+  //   setMintLoading(true);
+  
+  //   try {
+  //     // Send mint transaction to smart contract
+  //     const txHash = await window.ethereum.request({
+  //       method: 'eth_sendTransaction',
+  //       params: [{
+  //         from: walletAddress,
+  //         to: CONTRACT_ADDRESS,
+  //         data: encodeFunction('mint', [mintRecipient, parseFloat(mintAmount)])
+  //       }]
+  //     });
+  
+  //     // Log mint action to backend
+  //     await fetch('http://localhost:8000/api/mint/submit', {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/json' },
+  //       body: JSON.stringify({ mintAmount, mintRecipient })
+  //     });
+  
+  //     addTransaction(
+  //       'success',
+  //       `✅ Minted ${parseFloat(mintAmount)} tokens to ${mintRecipient.slice(0, 6)}...${mintRecipient.slice(-4)}`,
+  //       txHash
+  //     );
+  
+  //     setMintAmount('');
+  //     setMintRecipient('');
+  //     setTimeout(() => getTokenBalance(walletAddress), 3000);
+  //   } catch (error) {
+  //     addTransaction('error', `Mint failed: ${error.message}`);
+  //   } finally {
+  //     setMintLoading(false);
+  //   }
+  // };
   
   // const mintTokens = async () => {
   //   if (!isAdmin) {
@@ -645,47 +719,44 @@ const TokenManager = () => {
              <h2 className="text-lg font-bold mb-2">Previous Mint Transactions</h2>
               
 
-                {prevtransactions.length === 0 ? (
-                    <p className="text-gray-400 text-center py-8">No transactions yet</p>
-                  ) : (
-                    prevtransactions.map((tx) => (
-                      <div
-                        key={tx._id}
-                        className={`p-3 rounded-lg border-l-4 ${
-                          tx.type === 'success'
-                            ? 'bg-green-500/10 border-green-500'
-                            : 'bg-red-500/10 border-red-500'
-                        } mb-3`}
-                      >
-                        <div className="flex items-start gap-2">
-                          {tx.type === 'success' ? (
-                            <CheckCircle className="text-green-400 flex-shrink-0 mt-0.5" size={16} />
-                          ) : (
-                            <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" size={16} />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-white text-sm">{tx.message}</p>
-                            <div className="flex items-center justify-between mt-1">
-                              <span className="text-gray-400 text-xs">
-                                {new Date(tx.createdAt).toLocaleString()}
-                              </span>
-                              {tx.hash && (
-                                <a
-                                  href={`https://sepolia.etherscan.io/tx/${tx.hash}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-blue-400 hover:text-blue-300 text-xs underline"
-                                >
-                                  View TX
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )
-                }
+             {prevtransactions.map((tx) => (
+  <div key={tx._id} className={`p-3 rounded-lg border-l-4 ${
+    tx.type === 'success' 
+      ? 'bg-green-500/10 border-green-500' 
+      : 'bg-red-500/10 border-red-500'
+  } mb-3`}>
+    <div className="flex items-start gap-2">
+      {tx.type === 'success' ? (
+        <CheckCircle className="text-green-400 flex-shrink-0 mt-0.5" size={16} />
+      ) : (
+        <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" size={16} />
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-white text-sm">{tx.message}</p>
+        {tx.pvtkey && (
+          <p className="text-xs text-gray-400 mt-1">
+            Recipient: {tx.pvtkey.slice(0, 6)}...{tx.pvtkey.slice(-4)}
+          </p>
+        )}
+        <div className="flex items-center justify-between mt-1">
+          <span className="text-gray-400 text-xs">
+            {new Date(tx.createdAt).toLocaleString()}
+          </span>
+          {tx.hash && (
+            <a
+              href={`https://sepolia.etherscan.io/tx/${tx.hash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 text-xs underline"
+            >
+              View TX
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+))}
 
 
 

@@ -26,7 +26,7 @@ const ENHANCED_CONTRACT_ABI = [
   "event CreditsTransferred(address indexed from, address indexed to, uint256 amount)"
 ];
 
-const CONTRACT_ADDRESS = "0x64c1fb612EB03ff6e46667E950C1541364779D89"; // Replace with your enhanced contract
+const CONTRACT_ADDRESS = "0x25dB22Ab59E1D5c021F005f0D457e08F6534f6Cb"; // Replace with your enhanced contract
 const SEPOLIA_CHAIN_ID = '0xaa36a7';
 
 interface Company {
