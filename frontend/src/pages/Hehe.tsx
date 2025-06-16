@@ -1,650 +1,672 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 
-// Enhanced Contract ABI (you'll need this new contract)
-const ENHANCED_CONTRACT_ABI = [
-  // Existing functions
-  "function registerCompany(string memory name) external",
-  "function reportEmissions(uint256 emissions) external",
-  "function buyCredits(uint256 amount) external payable",
-  "function companies(address) external view returns (bool, string, uint256, uint256)",
-  "function carbonToken() external view returns (address)",
-  "function tokenPrice() external view returns (uint256)",
-  
-  // New Marketplace functions
-  "function createListing(uint256 amount, uint256 pricePerCredit) external",
-  "function purchaseFromListing(uint256 listingId, uint256 amount) external payable",
-  "function cancelListing(uint256 listingId) external",
-  "function getAllListings() external view returns (tuple(uint256 id, address seller, uint256 amount, uint256 remaining, uint256 pricePerCredit, bool active)[])",
-  "function transferCredits(address to, uint256 amount) external",
-  "function getUserListings(address user) external view returns (uint256[])",
-  
-  // Events
-  "event ListingCreated(uint256 indexed listingId, address indexed seller, uint256 amount, uint256 pricePerCredit)",
-  "event ListingPurchased(uint256 indexed listingId, address indexed buyer, uint256 amount, uint256 totalCost)",
-  "event CreditsPurchased(address indexed buyer, uint256 amount)",
-  "event CreditsTransferred(address indexed from, address indexed to, uint256 amount)"
+// Types
+interface Transaction {
+  _id: string;
+  id: number;
+  type: 'success' | 'error';
+  message: string;
+  pvtkey: string | null;
+  hash: string | null;
+  timestamp: string;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
+}
+
+interface WalletState {
+  address: string | null;
+  ethBalance: string;
+  tokenBalance: string;
+  isConnected: boolean;
+}
+
+interface UserStats {
+  totalMinted: number;
+  successfulTxs: number;
+}
+
+interface StatusMessage {
+  message: string;
+  type: 'success' | 'error' | 'info';
+  show: boolean;
+}
+
+// Contract ABIs
+const TOKEN_ABI = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function totalSupply() view returns (uint256)",
+  "function balanceOf(address) view returns (uint256)",
+  "function transfer(address to, uint256 amount) returns (bool)",
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "function mint(address to, uint256 amount)",
+  "function burn(uint256 amount)",
+  "function burnFrom(address account, uint256 amount)"
 ];
 
-const CONTRACT_ADDRESS = "0x25dB22Ab59E1D5c021F005f0D457e08F6534f6Cb"; // Replace with your enhanced contract
-const SEPOLIA_CHAIN_ID = '0xaa36a7';
+const MAIN_CONTRACT_ABI = [
+  "constructor(address _tokenAddress)",
+  "function buyTokens() payable",
+  "function depositTokens(uint256 amount)",
+  "function owner() view returns (address)",
+  "function sellTokens(uint256 tokenAmount)",
+  "function token() view returns (address)",
+  "function tokensPerEth() view returns (uint256)",
+  "function withdrawETH()"
+];
 
-interface Company {
-  isRegistered: boolean;
-  name: string;
-  emissions: number;
-  credits: number;
-}
+// Configuration
+const CONFIG = {
+  contractAddress: "0x6aD4fB62788143478C8Eaa23103c42F8bf8323fC", // Replace with your deployed contract address
+  tokenAddress: "0x112A911E546f5E2640DbEA4D156028a740b482eC", // Replace with your token contract address
+  apiUrl: "http://localhost:8000/api/transactions"
+};
 
-interface Listing {
-  id: number;
-  seller: string;
-  amount: number;
-  remaining: number;
-  pricePerCredit: number;
-  active: boolean;
-}
+// Custom Hooks
+const useWallet = () => {
+  const [wallet, setWallet] = useState<WalletState>({
+    address: null,
+    ethBalance: '0',
+    tokenBalance: '0',
+    isConnected: false
+  });
+  const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
+  const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null);
+  const [tokenContract, setTokenContract] = useState<ethers.Contract | null>(null);
+  const [mainContract, setMainContract] = useState<ethers.Contract | null>(null);
 
-interface Transaction {
-  hash: string;
-  type: string;
-  timestamp: Date;
-  status: 'pending' | 'confirmed' | 'failed';
-  details: string;
-}
-
-const CarbonMarketplace: React.FC = () => {
-  const [account, setAccount] = useState<string>('');
-  const [contract, setContract] = useState<any>(null);
-  const [tokenContract, setTokenContract] = useState<any>(null);
-  const [company, setCompany] = useState<Company | null>(null);
-  const [tokenBalance, setTokenBalance] = useState<string>('0');
-  const [ethBalance, setEthBalance] = useState<string>('0');
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [activeTab, setActiveTab] = useState<string>('dashboard');
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
-
-  // Form states
-  const [companyName, setCompanyName] = useState<string>('');
-  const [emissions, setEmissions] = useState<string>('');
-  const [buyAmount, setBuyAmount] = useState<string>('');
-  const [listAmount, setListAmount] = useState<string>('');
-  const [listPrice, setListPrice] = useState<string>('');
-  const [transferTo, setTransferTo] = useState<string>('');
-  const [transferAmount, setTransferAmount] = useState<string>('');
-
-  const ERC20_ABI = [
-    "function balanceOf(address owner) view returns (uint256)",
-    "function transfer(address to, uint256 amount) returns (bool)",
-    "function approve(address spender, uint256 amount) returns (bool)",
-    "function allowance(address owner, address spender) view returns (uint256)"
-  ];
-
-  const addTransaction = (hash: string, type: string, details: string) => {
-    const newTx: Transaction = {
-      hash,
-      type,
-      timestamp: new Date(),
-      status: 'pending',
-      details
-    };
-    setTransactions(prev => [newTx, ...prev]);
-  };
-
-  const connectWallet = async () => {
+  const connectWallet = async (): Promise<boolean> => {
     try {
-      if (!window.ethereum) {
-        alert('Please install MetaMask!');
-        return;
+      if (typeof window.ethereum === 'undefined') {
+        throw new Error('Please install MetaMask!');
       }
 
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const network = await provider.getNetwork();
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
       
-      if (network.chainId !== BigInt(parseInt(SEPOLIA_CHAIN_ID, 16))) {
+      const newProvider = new ethers.BrowserProvider(window.ethereum);
+      const newSigner = await newProvider.getSigner();
+      const address = await newSigner.getAddress();
+
+      setProvider(newProvider);
+      setSigner(newSigner);
+
+      // Initialize contracts
+      let newTokenContract = null;
+      let newMainContract = null;
+
+      if (CONFIG.tokenAddress !== "YOUR_TOKEN_ADDRESS") {
+        newTokenContract = new ethers.Contract(CONFIG.tokenAddress, TOKEN_ABI, newSigner);
+        setTokenContract(newTokenContract);
+      }
+
+      if (CONFIG.contractAddress !== "YOUR_CONTRACT_ADDRESS") {
+        newMainContract = new ethers.Contract(CONFIG.contractAddress, MAIN_CONTRACT_ABI, newSigner);
+        setMainContract(newMainContract);
+      }
+
+      setWallet(prev => ({
+        ...prev,
+        address,
+        isConnected: true
+      }));
+
+      // Listen for account changes
+      window.ethereum.on('accountsChanged', (accounts: string[]) => {
+        if (accounts.length === 0) {
+          disconnectWallet();
+        } else {
+          connectWallet();
+        }
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Failed to connect wallet:', error);
+      return false;
+    }
+  };
+
+  const disconnectWallet = () => {
+    setWallet({
+      address: null,
+      ethBalance: '0',
+      tokenBalance: '0',
+      isConnected: false
+    });
+    setProvider(null);
+    setSigner(null);
+    setTokenContract(null);
+    setMainContract(null);
+  };
+
+  const updateBalances = useCallback(async () => {
+    if (!provider || !wallet.address) return;
+
+    try {
+      // Update ETH balance
+      const ethBalance = await provider.getBalance(wallet.address);
+      const ethBalanceFormatted = parseFloat(ethers.formatEther(ethBalance)).toFixed(4);
+
+      let tokenBalanceFormatted = 'N/A';
+      
+      // Update token balance
+      if (tokenContract) {
         try {
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: SEPOLIA_CHAIN_ID }],
-          });
-        } catch (switchError: any) {
-          if (switchError.code === 4902) {
-            await window.ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: SEPOLIA_CHAIN_ID,
-                chainName: 'Sepolia',
-                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-                rpcUrls: ['https://sepolia.infura.io/v3/'],
-                blockExplorerUrls: ['https://sepolia.etherscan.io/']
-              }]
-            });
-          }
+          const tokenBalance = await tokenContract.balanceOf(wallet.address);
+          const decimals = await tokenContract.decimals();
+          tokenBalanceFormatted = parseFloat(ethers.formatUnits(tokenBalance, decimals)).toFixed(2);
+        } catch (error) {
+          console.log('Token contract not available');
         }
       }
 
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      setAccount(accounts[0]);
-
-      const signer = await provider.getSigner();
-      const contractInstance = new ethers.Contract(CONTRACT_ADDRESS, ENHANCED_CONTRACT_ABI, signer);
-      setContract(contractInstance);
-
-      // Get token contract
-      const tokenAddress = await contractInstance.carbonToken();
-      const tokenInstance = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-      setTokenContract(tokenInstance);
-
-      // Load user data
-      await loadUserData(contractInstance, tokenInstance, accounts[0]);
-      await loadListings(contractInstance);
-
-    } catch (error: any) {
-      console.error('Connection error:', error);
-      setError(error.message);
+      setWallet(prev => ({
+        ...prev,
+        ethBalance: ethBalanceFormatted,
+        tokenBalance: tokenBalanceFormatted
+      }));
+    } catch (error) {
+      console.error('Failed to update balances:', error);
     }
+  }, [provider, wallet.address, tokenContract]);
+
+  return {
+    wallet,
+    provider,
+    signer,
+    tokenContract,
+    mainContract,
+    connectWallet,
+    disconnectWallet,
+    updateBalances
   };
+};
 
-  const loadUserData = async (contractInstance: any, tokenInstance: any, userAddress: string) => {
-    try {
-      const companyData = await contractInstance.companies(userAddress);
-      setCompany({
-        isRegistered: companyData[0],
-        name: companyData[1],
-        emissions: Number(companyData[2]),
-        credits: Number(companyData[3])
-      });
+const useTransactions = () => {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(false);
 
-      const balance = await tokenInstance.balanceOf(userAddress);
-      setTokenBalance(ethers.formatEther(balance));
-
-      const provider = new ethers.BrowserProvider(window.ethereum);
-      const ethBal = await provider.getBalance(userAddress);
-      setEthBalance(ethers.formatEther(ethBal));
-
-    } catch (error: any) {
-      console.error('Error loading user data:', error);
-    }
-  };
-
-  const loadListings = async (contractInstance: any) => {
-    try {
-      const allListings = await contractInstance.getAllListings();
-      const formattedListings = allListings.map((listing: any) => ({
-        id: Number(listing.id),
-        seller: listing.seller,
-        amount: Number(listing.amount),
-        remaining: Number(listing.remaining),
-        pricePerCredit: Number(ethers.formatEther(listing.pricePerCredit)),
-        active: listing.active
-      })).filter((listing: Listing) => listing.active && listing.remaining > 0);
-      
-      setListings(formattedListings);
-    } catch (error: any) {
-      console.error('Error loading listings:', error);
-    }
-  };
-
-  const registerCompany = async () => {
-    if (!contract || !companyName.trim()) return;
-    
+  const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
-      const tx = await contract.registerCompany(companyName);
-      addTransaction(tx.hash, 'Company Registration', `Registered company: ${companyName}`);
-      await tx.wait();
-      await loadUserData(contract, tokenContract, account);
-      setCompanyName('');
-      alert('Company registered successfully!');
-    } catch (error: any) {
-      console.error('Registration error:', error);
-      setError(error.message);
+      const response = await fetch(CONFIG.apiUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setTransactions(data);
+    } catch (error) {
+      console.error('Failed to fetch transactions:', error);
+      setTransactions([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
-
-  const reportEmissions = async () => {
-    if (!contract || !emissions) return;
-    
-    setLoading(true);
-    try {
-      const tx = await contract.reportEmissions(emissions);
-      addTransaction(tx.hash, 'Emissions Report', `Reported ${emissions} tons of emissions`);
-      await tx.wait();
-      await loadUserData(contract, tokenContract, account);
-      setEmissions('');
-      alert('Emissions reported successfully!');
-    } catch (error: any) {
-      console.error('Emissions error:', error);
-      setError(error.message);
-    }
-    setLoading(false);
-  };
-
-  const buyCreditsFromContract = async () => {
-    if (!contract || !buyAmount) return;
-    
-    setLoading(true);
-    try {
-      const tokenPrice = await contract.tokenPrice();
-      const totalCost = BigInt(buyAmount) * tokenPrice;
-      
-      const tx = await contract.buyCredits(buyAmount, { value: totalCost });
-      addTransaction(tx.hash, 'Direct Purchase', `Bought ${buyAmount} credits for ${ethers.formatEther(totalCost)} ETH`);
-      await tx.wait();
-      await loadUserData(contract, tokenContract, account);
-      setBuyAmount('');
-      alert('Credits purchased successfully!');
-    } catch (error: any) {
-      console.error('Purchase error:', error);
-      setError(error.message);
-    }
-    setLoading(false);
-  };
-
-  const createListing = async () => {
-    if (!contract || !listAmount || !listPrice) return;
-    
-    setLoading(true);
-    try {
-      const priceInWei = ethers.parseEther(listPrice);
-      const tx = await contract.createListing(listAmount, priceInWei);
-      addTransaction(tx.hash, 'Create Listing', `Listed ${listAmount} credits at ${listPrice} ETH each`);
-      await tx.wait();
-      await loadListings(contract);
-      await loadUserData(contract, tokenContract, account);
-      setListAmount('');
-      setListPrice('');
-      alert('Listing created successfully!');
-    } catch (error: any) {
-      console.error('Listing error:', error);
-      setError(error.message);
-    }
-    setLoading(false);
-  };
-
-  const purchaseFromListing = async (listingId: number, amount: number, pricePerCredit: number) => {
-    if (!contract) return;
-    
-    setLoading(true);
-    try {
-      const totalCost = ethers.parseEther((amount * pricePerCredit).toString());
-      const tx = await contract.purchaseFromListing(listingId, amount, { value: totalCost });
-      addTransaction(tx.hash, 'Marketplace Purchase', `Bought ${amount} credits for ${amount * pricePerCredit} ETH`);
-      await tx.wait();
-      await loadListings(contract);
-      await loadUserData(contract, tokenContract, account);
-      alert('Credits purchased from marketplace!');
-    } catch (error: any) {
-      console.error('Purchase error:', error);
-      setError(error.message);
-    }
-    setLoading(false);
-  };
-
-  const transferCredits = async () => {
-    if (!contract || !transferTo || !transferAmount) return;
-    
-    setLoading(true);
-    try {
-      const amountInWei = ethers.parseEther(transferAmount);
-      const tx = await contract.transferCredits(transferTo, amountInWei);
-      addTransaction(tx.hash, 'P2P Transfer', `Transferred ${transferAmount} credits to ${transferTo.slice(0,6)}...${transferTo.slice(-4)}`);
-      await tx.wait();
-      await loadUserData(contract, tokenContract, account);
-      setTransferTo('');
-      setTransferAmount('');
-      alert('Credits transferred successfully!');
-    } catch (error: any) {
-      console.error('Transfer error:', error);
-      setError(error.message);
-    }
-    setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
-    if (window.ethereum) {
-      window.ethereum.on('accountsChanged', (accounts: string[]) => {
-        if (accounts.length > 0) {
-          setAccount(accounts[0]);
-          if (contract && tokenContract) {
-            loadUserData(contract, tokenContract, accounts[0]);
-          }
-        }
-      });
-    }
-  }, [contract, tokenContract]);
+    fetchTransactions();
+    const interval = setInterval(fetchTransactions, 5000);
+    return () => clearInterval(interval);
+  }, [fetchTransactions]);
 
-  const TabButton = ({ id, label, isActive, onClick }: any) => (
-    <button
-      onClick={() => onClick(id)}
-      className={`px-6 py-3 rounded-lg font-medium transition-all ${
-        isActive
-          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg'
-          : 'bg-gray-800/50 text-gray-300 hover:bg-gray-700/50'
+  return { transactions, loading, fetchTransactions };
+};
+
+// Components
+const StatusIndicator: React.FC<{ status: StatusMessage }> = ({ status }) => {
+  return (
+    <div 
+      className={`fixed top-5 right-5 px-5 py-3 rounded-lg text-white font-semibold z-50 transition-transform duration-300 ${
+        status.show ? 'translate-x-0' : 'translate-x-96'
+      } ${
+        status.type === 'success' ? 'bg-gradient-to-r from-green-500 to-green-600' :
+        status.type === 'error' ? 'bg-gradient-to-r from-red-500 to-red-600' :
+        'bg-gradient-to-r from-blue-500 to-blue-600'
       }`}
     >
-      {label}
-    </button>
+      {status.message}
+    </div>
   );
+};
+
+const WalletSection: React.FC<{
+  wallet: WalletState;
+  onConnect: () => Promise<boolean>;
+  onShowStatus: (message: string, type: 'success' | 'error' | 'info') => void;
+}> = ({ wallet, onConnect, onShowStatus }) => {
+  
+  const handleConnect = async () => {
+    const success = await onConnect();
+    if (success) {
+      onShowStatus('Wallet connected successfully!', 'success');
+    } else {
+      onShowStatus('Failed to connect wallet', 'error');
+    }
+  };
+
+  if (!wallet.isConnected) {
+    return (
+      <div className="bg-white/95 backdrop-blur-lg rounded-3xl p-6 shadow-xl border border-white/20">
+        <button
+          onClick={handleConnect}
+          className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-3 px-6 rounded-xl font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300"
+        >
+          🔗 Connect MetaMask Wallet
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-indigo-900 to-gray-900 text-white">
-      {/* Header */}
-      <div className="bg-black/20 backdrop-blur-sm border-b border-purple-500/20">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent">
-                Carbon Credit Marketplace
-              </h1>
-              <p className="text-gray-400 mt-1">Trade carbon credits securely on blockchain</p>
-            </div>
-            <div className="flex items-center gap-4">
-              {account ? (
-                <div className="text-right">
-                  <div className="text-sm text-gray-400">Connected</div>
-                  <div className="font-mono text-purple-300">{account.slice(0,6)}...{account.slice(-4)}</div>
-                  <div className="text-sm text-gray-400">Balance: {parseFloat(ethBalance).toFixed(4)} ETH</div>
-                </div>
-              ) : (
-                <button
-                  onClick={connectWallet}
-                  className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-2 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all"
-                >
-                  Connect Wallet
-                </button>
-              )}
-            </div>
+    <div className="bg-white/95 backdrop-blur-lg rounded-3xl p-6 shadow-xl border border-white/20">
+      <div className="bg-gradient-to-r from-green-500 to-green-600 text-white p-5 rounded-2xl mb-5">
+        <h3 className="text-lg font-semibold mb-3">💼 Connected Wallet</h3>
+        <div className="bg-white/20 p-2 rounded-lg font-mono text-sm break-all">
+          {wallet.address?.slice(0, 6)}...{wallet.address?.slice(-4)}
+        </div>
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="bg-white/20 p-3 rounded-xl text-center">
+            <div className="text-xl font-bold">{wallet.ethBalance}</div>
+            <div className="text-sm opacity-90">ETH Balance</div>
+          </div>
+          <div className="bg-white/20 p-3 rounded-xl text-center">
+            <div className="text-xl font-bold">{wallet.tokenBalance}</div>
+            <div className="text-sm opacity-90">CCT Balance</div>
           </div>
         </div>
       </div>
+    </div>
+  );
+};
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-12 gap-8">
-          {/* Main Content */}
-          <div className="col-span-8">
-            {/* Navigation Tabs */}
-            <div className="flex gap-2 mb-8 bg-gray-800/30 p-2 rounded-lg backdrop-blur-sm">
-              <TabButton id="dashboard" label="Dashboard" isActive={activeTab === 'dashboard'} onClick={setActiveTab} />
-              <TabButton id="marketplace" label="Marketplace" isActive={activeTab === 'marketplace'} onClick={setActiveTab} />
-              <TabButton id="sell" label="Sell Credits" isActive={activeTab === 'sell'} onClick={setActiveTab} />
-              <TabButton id="transfer" label="P2P Transfer" isActive={activeTab === 'transfer'} onClick={setActiveTab} />
-            </div>
+const UserStatsSection: React.FC<{
+  wallet: WalletState;
+  transactions: Transaction[];
+}> = ({ wallet, transactions }) => {
+  const stats: UserStats = React.useMemo(() => {
+    if (!wallet.address) return { totalMinted: 0, successfulTxs: 0 };
 
-            {/* Dashboard Tab */}
-            {activeTab === 'dashboard' && (
-              <div className="space-y-6">
-                {/* User Stats */}
-                <div className="grid grid-cols-3 gap-6">
-                  <div className="bg-gradient-to-br from-purple-800/50 to-indigo-800/50 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
-                    <h3 className="text-lg font-semibold text-gray-300 mb-2">Token Balance</h3>
-                    <p className="text-3xl font-bold text-purple-300">{parseFloat(tokenBalance).toFixed(2)}</p>
-                    <p className="text-sm text-gray-400">Carbon Credits</p>
-                  </div>
-                  <div className="bg-gradient-to-br from-purple-800/50 to-indigo-800/50 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
-                    <h3 className="text-lg font-semibold text-gray-300 mb-2">Emissions</h3>
-                    <p className="text-3xl font-bold text-red-400">{company?.emissions || 0}</p>
-                    <p className="text-sm text-gray-400">Tons CO₂</p>
-                  </div>
-                  <div className="bg-gradient-to-br from-purple-800/50 to-indigo-800/50 backdrop-blur-sm rounded-xl p-6 border border-purple-500/20">
-                    <h3 className="text-lg font-semibold text-gray-300 mb-2">Company</h3>
-                    <p className="text-lg font-bold text-green-400">{company?.isRegistered ? 'Registered' : 'Not Registered'}</p>
-                    <p className="text-sm text-gray-400">{company?.name || 'No Name'}</p>
-                  </div>
-                </div>
+    const userTransactions = transactions.filter(tx => 
+      tx.pvtkey && tx.pvtkey.toLowerCase() === wallet.address!.toLowerCase()
+    );
 
-                {/* Actions */}
-                <div className="grid grid-cols-2 gap-6">
-                  {/* Company Registration */}
-                  {!company?.isRegistered && (
-                    <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
-                      <h3 className="text-xl font-semibold mb-4 text-purple-300">Register Company</h3>
-                      <input
-                        type="text"
-                        placeholder="Company Name"
-                        value={companyName}
-                        onChange={(e) => setCompanyName(e.target.value)}
-                        className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 mb-4 focus:border-purple-500 focus:outline-none"
-                      />
-                      <button
-                        onClick={registerCompany}
-                        disabled={loading || !companyName.trim()}
-                        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                      >
-                        {loading ? 'Registering...' : 'Register Company'}
-                      </button>
-                    </div>
-                  )}
+    const successfulTxs = userTransactions.filter(tx => tx.type === 'success');
+    const totalMinted = successfulTxs.reduce((sum, tx) => {
+      const match = tx.message.match(/Minted ([\d.]+) tokens/);
+      return sum + (match ? parseFloat(match[1]) : 0);
+    }, 0);
 
-                  {/* Emissions Reporting */}
-                  {company?.isRegistered && (
-                    <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
-                      <h3 className="text-xl font-semibold mb-4 text-purple-300">Report Emissions</h3>
-                      <input
-                        type="number"
-                        placeholder="Emissions (tons)"
-                        value={emissions}
-                        onChange={(e) => setEmissions(e.target.value)}
-                        className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 mb-4 focus:border-purple-500 focus:outline-none"
-                      />
-                      <button
-                        onClick={reportEmissions}
-                        disabled={loading || !emissions}
-                        className="w-full bg-gradient-to-r from-orange-600 to-red-600 py-3 rounded-lg hover:from-orange-700 hover:to-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                      >
-                        {loading ? 'Reporting...' : 'Report Emissions'}
-                      </button>
-                    </div>
-                  )}
+    return {
+      totalMinted: Number(totalMinted.toFixed(2)),
+      successfulTxs: successfulTxs.length
+    };
+  }, [wallet.address, transactions]);
 
-                  {/* Buy Credits */}
-                  <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
-                    <h3 className="text-xl font-semibold mb-4 text-purple-300">Buy Credits (Direct)</h3>
-                    <input
-                      type="number"
-                      placeholder="Amount"
-                      value={buyAmount}
-                      onChange={(e) => setBuyAmount(e.target.value)}
-                      className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 mb-2 focus:border-purple-500 focus:outline-none"
-                    />
-                    {buyAmount && (
-                      <p className="text-sm text-gray-400 mb-4">Cost: {(parseFloat(buyAmount) * 0.001).toFixed(4)} ETH</p>
-                    )}
-                    <button
-                      onClick={buyCreditsFromContract}
-                      disabled={loading || !buyAmount}
-                      className="w-full bg-gradient-to-r from-green-600 to-teal-600 py-3 rounded-lg hover:from-green-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                    >
-                      {loading ? 'Purchasing...' : 'Buy Credits'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+  if (!wallet.isConnected) return null;
 
-            {/* Marketplace Tab */}
-            {activeTab === 'marketplace' && (
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-purple-300">Available Listings</h2>
-                <div className="grid gap-4">
-                  {listings.length > 0 ? listings.map((listing) => (
-                    <div key={listing.id} className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="text-lg font-semibold">Listing #{listing.id}</p>
-                          <p className="text-gray-400">Seller: {listing.seller.slice(0,6)}...{listing.seller.slice(-4)}</p>
-                          <p className="text-purple-300">Available: {listing.remaining} credits</p>
-                          <p className="text-green-400">Price: {listing.pricePerCredit} ETH per credit</p>
-                        </div>
-                        <div className="text-right space-y-2">
-                          <input
-                            type="number"
-                            placeholder="Amount to buy"
-                            max={listing.remaining}
-                            className="bg-gray-700/50 border border-gray-600 rounded-lg px-3 py-2 w-32 focus:border-purple-500 focus:outline-none"
-                            onChange={(e) => {
-                              const amount = parseInt(e.target.value) || 0;
-                              e.target.setAttribute('data-amount', amount.toString());
-                            }}
-                          />
-                          <button
-                            onClick={(e) => {
-                              const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                              const amount = parseInt(input.getAttribute('data-amount') || '0');
-                              if (amount > 0) {
-                                purchaseFromListing(listing.id, amount, listing.pricePerCredit);
-                              }
-                            }}
-                            disabled={loading}
-                            className="block w-full bg-gradient-to-r from-purple-600 to-indigo-600 py-2 px-4 rounded-lg hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                          >
-                            {loading ? 'Buying...' : 'Buy Credits'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )) : (
-                    <div className="text-center py-12 text-gray-400">
-                      <p>No active listings available</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+  return (
+    <div className="bg-white/95 backdrop-blur-lg rounded-3xl p-6 shadow-xl border border-white/20">
+      <h3 className="text-lg font-semibold mb-4 text-gray-700">📊 Your Statistics</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-gradient-to-r from-pink-400 to-purple-400 text-white p-4 rounded-2xl text-center">
+          <div className="text-2xl font-bold">{stats.totalMinted}</div>
+          <div className="text-sm opacity-90">Total Minted</div>
+        </div>
+        <div className="bg-gradient-to-r from-pink-400 to-purple-400 text-white p-4 rounded-2xl text-center">
+          <div className="text-2xl font-bold">{stats.successfulTxs}</div>
+          <div className="text-sm opacity-90">Successful Txs</div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-            {/* Sell Credits Tab */}
-            {activeTab === 'sell' && (
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-purple-300">Create Listing</h2>
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <input
-                      type="number"
-                      placeholder="Amount to sell"
-                      value={listAmount}
-                      onChange={(e) => setListAmount(e.target.value)}
-                      className="bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 focus:border-purple-500 focus:outline-none"
-                    />
-                    <input
-                      type="number"
-                      step="0.001"
-                      placeholder="Price per credit (ETH)"
-                      value={listPrice}
-                      onChange={(e) => setListPrice(e.target.value)}
-                      className="bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 focus:border-purple-500 focus:outline-none"
-                    />
-                  </div>
-                  {listAmount && listPrice && (
-                    <p className="text-sm text-gray-400 mb-4">
-                      Total Value: {(parseFloat(listAmount) * parseFloat(listPrice)).toFixed(4)} ETH
-                    </p>
-                  )}
-                  <button
-                    onClick={createListing}
-                    disabled={loading || !listAmount || !listPrice}
-                    className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 py-3 rounded-lg hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    {loading ? 'Creating...' : 'Create Listing'}
-                  </button>
-                </div>
-              </div>
-            )}
+const TokenActionsSection: React.FC<{
+  wallet: WalletState;
+  tokenContract: ethers.Contract | null;
+  mainContract: ethers.Contract | null;
+  onUpdateBalances: () => Promise<void>;
+  onShowStatus: (message: string, type: 'success' | 'error' | 'info') => void;
+}> = ({ wallet, tokenContract, mainContract, onUpdateBalances, onShowStatus }) => {
+  const [buyAmount, setBuyAmount] = useState('');
+  const [sellAmount, setSellAmount] = useState('');
+  const [depositAmount, setDepositAmount] = useState('');
+  const [isLoading, setIsLoading] = useState<string | null>(null);
 
-            {/* P2P Transfer Tab */}
-            {activeTab === 'transfer' && (
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-purple-300">P2P Transfer</h2>
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
-                  <div className="space-y-4">
-                    <input
-                      type="text"
-                      placeholder="Recipient Address"
-                      value={transferTo}
-                      onChange={(e) => setTransferTo(e.target.value)}
-                      className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 focus:border-purple-500 focus:outline-none"
-                    />
-                    <input
-                      type="number"
-                      placeholder="Amount to transfer"
-                      value={transferAmount}
-                      onChange={(e) => setTransferAmount(e.target.value)}
-                      className="w-full bg-gray-700/50 border border-gray-600 rounded-lg px-4 py-3 focus:border-purple-500 focus:outline-none"
-                    />
-                    <button
-                      onClick={transferCredits}
-                      disabled={loading || !transferTo || !transferAmount}
-                      className="w-full bg-gradient-to-r from-blue-600 to-teal-600 py-3 rounded-lg hover:from-blue-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                    >
-                      {loading ? 'Transferring...' : 'Transfer Credits'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+  if (!wallet.isConnected) return null;
+
+  const handleBuyTokens = async () => {
+    if (!buyAmount || !mainContract) return;
+    
+    setIsLoading('buy');
+    try {
+      onShowStatus('Processing buy transaction...', 'info');
+      const tx = await mainContract.buyTokens({
+        value: ethers.parseEther(buyAmount)
+      });
+      await tx.wait();
+      onShowStatus('Tokens purchased successfully!', 'success');
+      await onUpdateBalances();
+      setBuyAmount('');
+    } catch (error) {
+      console.error('Buy failed:', error);
+      onShowStatus('Buy transaction failed', 'error');
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
+  const handleSellTokens = async () => {
+    if (!sellAmount || !mainContract || !tokenContract) return;
+    
+    setIsLoading('sell');
+    try {
+      onShowStatus('Processing sell transaction...', 'info');
+      const decimals = await tokenContract.decimals();
+      const tokenAmount = ethers.parseUnits(sellAmount, decimals);
+      const tx = await mainContract.sellTokens(tokenAmount);
+      await tx.wait();
+      onShowStatus('Tokens sold successfully!', 'success');
+      await onUpdateBalances();
+      setSellAmount('');
+    } catch (error) {
+      console.error('Sell failed:', error);
+      onShowStatus('Sell transaction failed', 'error');
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
+  const handleDepositTokens = async () => {
+    if (!depositAmount || !mainContract || !tokenContract) return;
+    
+    setIsLoading('deposit');
+    try {
+      onShowStatus('Processing deposit transaction...', 'info');
+      const decimals = await tokenContract.decimals();
+      const tokenAmount = ethers.parseUnits(depositAmount, decimals);
+      
+      // First approve
+      const approveTx = await tokenContract.approve(CONFIG.contractAddress, tokenAmount);
+      await approveTx.wait();
+      
+      // Then deposit
+      const depositTx = await mainContract.depositTokens(tokenAmount);
+      await depositTx.wait();
+      
+      onShowStatus('Tokens deposited successfully!', 'success');
+      await onUpdateBalances();
+      setDepositAmount('');
+    } catch (error) {
+      console.error('Deposit failed:', error);
+      onShowStatus('Deposit transaction failed', 'error');
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
+  const handleWithdrawETH = async () => {
+    if (!mainContract) return;
+    
+    setIsLoading('withdraw');
+    try {
+      onShowStatus('Processing withdrawal...', 'info');
+      const tx = await mainContract.withdrawETH();
+      await tx.wait();
+      onShowStatus('ETH withdrawn successfully!', 'success');
+      await onUpdateBalances();
+    } catch (error) {
+      console.error('Withdrawal failed:', error);
+      onShowStatus('Withdrawal failed - Owner only function', 'error');
+    } finally {
+      setIsLoading(null);
+    }
+  };
+
+  return (
+    <div className="bg-white/95 backdrop-blur-lg rounded-3xl p-6 shadow-xl border border-white/20">
+      <h3 className="text-lg font-semibold mb-4 text-gray-700">💰 Token Actions</h3>
+      
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-600 mb-2">
+            Buy Tokens (ETH Amount)
+          </label>
+          <input
+            type="number"
+            value={buyAmount}
+            onChange={(e) => setBuyAmount(e.target.value)}
+            placeholder="0.1"
+            step="0.01"
+            min="0"
+            className="w-full text-black p-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors"
+          />
+          <button
+            onClick={handleBuyTokens}
+            disabled={isLoading === 'buy' || !buyAmount}
+            className="w-full mt-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-xl font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          >
+            {isLoading === 'buy' ? '⏳ Processing...' : '💳 Buy Tokens'}
+          </button>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-600 mb-2">
+            Sell Tokens (CCT Amount)
+          </label>
+          <input
+            type="number"
+            value={sellAmount}
+            onChange={(e) => setSellAmount(e.target.value)}
+            placeholder="1"
+            step="0.1"
+            min="0"
+            className="w-full p-3 text-black border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors"
+          />
+          <button
+            onClick={handleSellTokens}
+            disabled={isLoading === 'sell' || !sellAmount}
+            className="w-full mt-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-xl font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          >
+            {isLoading === 'sell' ? '⏳ Processing...' : '💸 Sell Tokens'}
+          </button>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-600 mb-2">
+            Deposit Tokens (CCT Amount)
+          </label>
+          <input
+            type="number"
+            value={depositAmount}
+            onChange={(e) => setDepositAmount(e.target.value)}
+            placeholder="1"
+            step="0.1"
+            min="0"
+            className="w-full p-3 text-black border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors"
+          />
+          <button
+            onClick={handleDepositTokens}
+            disabled={isLoading === 'deposit' || !depositAmount}
+            className="w-full mt-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-xl font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+          >
+            {isLoading === 'deposit' ? '⏳ Processing...' : '🏦 Deposit Tokens'}
+          </button>
+        </div>
+
+        <button
+          onClick={handleWithdrawETH}
+          disabled={isLoading === 'withdraw'}
+          className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+        >
+          {isLoading === 'withdraw' ? '⏳ Processing...' : '💰 Withdraw ETH (Owner Only)'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const TransactionsPanel: React.FC<{
+  transactions: Transaction[];
+  loading: boolean;
+  onRefresh: () => void;
+}> = ({ transactions, loading, onRefresh }) => {
+  const sortedTransactions = React.useMemo(() => {
+    return [...transactions].sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [transactions]);
+
+  return (
+    <div className="bg-white/95 backdrop-blur-lg rounded-3xl p-6 shadow-xl border border-white/20 h-[calc(100vh-2rem)] overflow-hidden flex flex-col">
+      <div className="flex justify-between items-center mb-5 pb-4 border-b-2 border-gray-100">
+        <h2 className="text-xl font-bold text-gray-700">📋 Live Transactions</h2>
+        <button
+          onClick={onRefresh}
+          disabled={loading}
+          className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-xl font-medium hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50"
+        >
+          {loading ? '⏳' : '🔄'} Refresh
+        </button>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto space-y-3">
+        {loading && transactions.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            <div className="inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+            <div>Loading transactions...</div>
           </div>
-
-          {/* Transaction History Sidebar */}
-          <div className="col-span-4">
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50 sticky top-8">
-              <h3 className="text-xl font-semibold mb-4 text-purple-300">Transaction History</h3>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {transactions.length > 0 ? transactions.map((tx, index) => (
-                  <div key={index} className="bg-gray-700/50 rounded-lg p-3 border border-gray-600/50">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-sm font-medium text-purple-300">{tx.type}</span>
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        tx.status === 'confirmed' ? 'bg-green-900/50 text-green-300' :
-                        tx.status === 'failed' ? 'bg-red-900/50 text-red-300' :
-                        'bg-yellow-900/50 text-yellow-300'
-                      }`}>
-                        {tx.status}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-400 mb-2">{tx.details}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-gray-500">
-                        {tx.timestamp.toLocaleTimeString()}
-                      </span>
-                      <a
-                        href={`https://sepolia.etherscan.io/tx/${tx.hash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
-                      >
-                        View →
-                      </a>
-                    </div>
-                  </div>
-                )) : (
-                  <div className="text-center py-8 text-gray-400">
-                    <p>No transactions yet</p>
+        ) : transactions.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            📭 No transactions found
+          </div>
+        ) : (
+          sortedTransactions.map((tx) => (
+            <div
+              key={tx._id}
+              className={`p-4 rounded-xl border-l-4 transition-all duration-300 hover:translate-x-1 hover:shadow-md ${
+                tx.type === 'success' 
+                  ? 'bg-green-50 border-l-green-500' 
+                  : 'bg-red-50 border-l-red-500'
+              }`}
+            >
+              <div className={`font-semibold text-sm mb-2 ${
+                tx.type === 'success' ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {tx.type === 'success' ? '✅' : '❌'} {tx.type.toUpperCase()}
+              </div>
+              <div className="text-gray-800 mb-2 text-sm leading-relaxed">
+                {tx.message}
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-2">
+                <div><strong>Time:</strong> {tx.timestamp}</div>
+                <div><strong>Date:</strong> {new Date(tx.createdAt).toLocaleDateString()}</div>
+                {tx.pvtkey && (
+                  <div className="col-span-2">
+                    <strong>Address:</strong> {tx.pvtkey.slice(0, 6)}...{tx.pvtkey.slice(-4)}
                   </div>
                 )}
               </div>
+              {tx.hash && (
+                <div className="text-xs bg-purple-100 p-2 rounded-lg font-mono break-all">
+                  <strong>Hash:</strong> {tx.hash}
+                </div>
+              )}
             </div>
-          </div>
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="fixed bottom-4 right-4 bg-red-900/90 backdrop-blur-sm border border-red-700 text-red-200 px-6 py-4 rounded-lg shadow-lg">
-            <div className="flex justify-between items-center">
-              <span>{error}</span>
-              <button
-                onClick={() => setError('')}
-                className="ml-4 text-red-400 hover:text-red-300"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
+          ))
         )}
       </div>
     </div>
   );
 };
 
-export default CarbonMarketplace;
+// Main App Component
+const CarbonCreditDApp: React.FC = () => {
+  const [status, setStatus] = useState<StatusMessage>({
+    message: '',
+    type: 'info',
+    show: false
+  });
+
+  const {
+    wallet,
+    tokenContract,
+    mainContract,
+    connectWallet,
+    updateBalances
+  } = useWallet();
+
+  const { transactions, loading, fetchTransactions } = useTransactions();
+
+  const showStatus = useCallback((message: string, type: 'success' | 'error' | 'info') => {
+    setStatus({ message, type, show: true });
+    setTimeout(() => {
+      setStatus(prev => ({ ...prev, show: false }));
+    }, 3000);
+  }, []);
+
+  // Update balances when wallet connects or transactions change
+  useEffect(() => {
+    if (wallet.isConnected) {
+      updateBalances();
+    }
+  }, [wallet.isConnected, transactions, updateBalances]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700">
+      <StatusIndicator status={status} />
+      
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-lg">
+            🌱 Carbon Credit Token
+          </h1>
+          <p className="text-xl text-white/90">
+            Decentralized Carbon Credit Trading Platform
+          </p>
+        </div>
+
+        {/* Main Content */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          {/* Left Column - Controls */}
+          <div className="xl:col-span-2 space-y-6">
+            <WalletSection
+              wallet={wallet}
+              onConnect={connectWallet}
+              onShowStatus={showStatus}
+            />
+            
+            <UserStatsSection
+              wallet={wallet}
+              transactions={transactions}
+            />
+            
+            <TokenActionsSection
+              wallet={wallet}
+              tokenContract={tokenContract}
+              mainContract={mainContract}
+              onUpdateBalances={updateBalances}
+              onShowStatus={showStatus}
+            />
+          </div>
+
+          {/* Right Column - Transactions */}
+          <div className="xl:col-span-1">
+            <TransactionsPanel
+              transactions={transactions}
+              loading={loading}
+              onRefresh={fetchTransactions}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CarbonCreditDApp;

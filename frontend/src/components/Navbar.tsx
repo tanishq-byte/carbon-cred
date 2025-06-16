@@ -2,7 +2,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import WalletConnectButton from "./WalletConnectButton";
 import { useEffect, useState } from "react";
-import { Leaf, Menu, X, LogOut, UserPlus, Zap } from "lucide-react";
+import { Leaf, Menu, X, LogOut, UserPlus } from "lucide-react";
 
 const Navbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -34,7 +34,7 @@ const Navbar = () => {
     localStorage.removeItem("role");
     setIsLoggedIn(false);
     setRole(null);
-    navigate("/");
+    navigate("/authform");
     console.log("🚪 User logged out successfully");
     alert("🚪 User logged out successfully");
   };

@@ -189,7 +189,7 @@ const TokenManager = () => {
     };
   
     // Save to state (frontend)
-    setTransactions(prev => [transaction, ...prev.slice(0, 9)]);
+    setTransactions(prev => [transaction, ...prev]);
   
     // Save to backend
     try {
@@ -674,7 +674,7 @@ const TokenManager = () => {
 
             {/* Transaction History */}
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
-             <h3 className="text-white font-semibold text-lg mb-4">Transaction History</h3>
+             <h3 className="text-white font-semibold text-lg mb-4">Recent Transaction History</h3>
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {transactions.length === 0 ? (
                   <p className="text-gray-400 text-center py-8">No transactions yet</p>
@@ -716,54 +716,52 @@ const TokenManager = () => {
 
             
              <div className="p-4">
-             <h2 className="text-lg font-bold mb-2">Previous Mint Transactions</h2>
-              
 
-             {prevtransactions.map((tx) => (
-  <div key={tx._id} className={`p-3 rounded-lg border-l-4 ${
-    tx.type === 'success' 
-      ? 'bg-green-500/10 border-green-500' 
-      : 'bg-red-500/10 border-red-500'
-  } mb-3`}>
-    <div className="flex items-start gap-2">
-      {tx.type === 'success' ? (
-        <CheckCircle className="text-green-400 flex-shrink-0 mt-0.5" size={16} />
-      ) : (
-        <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" size={16} />
-      )}
-      <div className="flex-1 min-w-0">
-        <p className="text-white text-sm">{tx.message}</p>
-        {tx.pvtkey && (
-          <p className="text-xs text-gray-400 mt-1">
-            Recipient: {tx.pvtkey.slice(0, 6)}...{tx.pvtkey.slice(-4)}
-          </p>
-        )}
-        <div className="flex items-center justify-between mt-1">
-          <span className="text-gray-400 text-xs">
-            {new Date(tx.createdAt).toLocaleString()}
-          </span>
-          {tx.hash && (
-            <a
-              href={`https://sepolia.etherscan.io/tx/${tx.hash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 text-xs underline"
-            >
-              View TX
-            </a>
-          )}
-        </div>
-      </div>
-    </div>
-  </div>
-))}
+              {/* {prevtransactions.map((tx) => (
+                <div key={tx._id} className={`p-3 rounded-lg border-l-4 ${
+                  tx.type === 'success' 
+                    ? 'bg-green-500/10 border-green-500' 
+                    : 'bg-red-500/10 border-red-500'
+                } mb-3`}>
+                  <div className="flex items-start gap-2">
+                    {tx.type === 'success' ? (
+                      <CheckCircle className="text-green-400 flex-shrink-0 mt-0.5" size={16} />
+                    ) : (
+                      <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" size={16} />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm">{tx.message}</p>
+                      {tx.pvtkey && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          Recipient: {tx.pvtkey.slice(0, 6)}...{tx.pvtkey.slice(-4)}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-gray-400 text-xs">
+                          {new Date(tx.createdAt).toLocaleString()}
+                        </span>
+                        {tx.hash && (
+                          <a
+                            href={`https://sepolia.etherscan.io/tx/${tx.hash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 text-xs underline"
+                          >
+                            View TX
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))} */}
 
 
 
 
-{/* reciept */}
-          <h2 className="text-lg font-bold mb-2">Previous Mint Transactions Reciept</h2>
-          <div className="p-4">
+    {/* reciept */}
+              {/* <h2 className="text-lg font-bold mb-2">Previous Mint Transactions Reciept</h2> */}
+              {/* <div className="p-4">
                 {recprevtransactions.length === 0 ? (
                   <p className="text-gray-400 text-center py-8">No transactions yet</p>
                 ) : (
@@ -783,18 +781,61 @@ const TokenManager = () => {
                             <span className="text-gray-400 text-xs">
                               {new Date(tx.createdAt).toLocaleString()}
                             </span>
-                            {/* Optional: Add View TX link if hash is present */}
                           </div>
                         </div>
                       </div>
                     </div>
                   ))
                 )}
-              </div>
+              </div> */}
 
             </div>
 
-
+            <h2 className="text-lg font-bold mb-2">Previous Mint Transactions</h2>
+              
+              <div className="max-h-[500px] overflow-y-auto pr-2"> {/* Scroll container */}
+               {prevtransactions.map((tx) => (
+                 <div 
+                   key={tx._id} 
+                   className={`p-3 rounded-lg border-l-4 ${
+                     tx.type === 'success' 
+                       ? 'bg-green-500/10 border-green-500' 
+                       : 'bg-red-500/10 border-red-500'
+                   } mb-3`}
+                 >
+                   <div className="flex items-start gap-2">
+                     {tx.type === 'success' ? (
+                       <CheckCircle className="text-green-400 flex-shrink-0 mt-0.5" size={16} />
+                     ) : (
+                       <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" size={16} />
+                     )}
+                     <div className="flex-1 min-w-0">
+                       <p className="text-white text-sm">{tx.message}</p>
+                       {tx.pvtkey && (
+                         <p className="text-xs text-gray-400 mt-1">
+                           Recipient: {tx.pvtkey.slice(0, 6)}...{tx.pvtkey.slice(-4)}
+                         </p>
+                       )}
+                       <div className="flex items-center justify-between mt-1">
+                         <span className="text-gray-400 text-xs">
+                           {new Date(tx.createdAt).toLocaleString()}
+                         </span>
+                         {tx.hash && (
+                           <a
+                             href={`https://sepolia.etherscan.io/tx/${tx.hash}`}
+                             target="_blank"
+                             rel="noopener noreferrer"
+                             className="text-blue-400 hover:text-blue-300 text-xs underline"
+                           >
+                             View TX
+                           </a>
+                         )}
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               ))}
+             </div>
  
 
 

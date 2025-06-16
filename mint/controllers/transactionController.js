@@ -28,7 +28,7 @@ export const createTransaction = async (req, res) => {
 // GET: Fetch last 10 transactions (latest first)
 export const getTransactions = async (req, res) => {
   try {
-    const transactions = await Transaction.find().sort({ createdAt: -1 }).limit(10);
+    const transactions = await Transaction.find().sort({ createdAt: -1 });
     res.status(200).json(transactions);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch transactions', details: err.message });
