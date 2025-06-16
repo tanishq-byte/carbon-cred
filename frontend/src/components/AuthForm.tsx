@@ -1,7 +1,23 @@
 // components/AuthForm.tsx
 import { useEffect, useState } from "react";
 //import { auth } from "../firebase";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import API from "../lib/axios";
 //import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
@@ -91,6 +107,8 @@ const AuthForm = () => {
           //if (res.data.userId) {
             localStorage.setItem("userId", res.data.userId); 
           //}
+          setIsLoggedIn(true);
+          console.log("🚀 ~ file: AuthForm.tsx:42 ~ handleAuth ~ res.data:", res.data);
           setTimeout(() => {
             navigate("/profile");
             window.location.reload();
@@ -101,7 +119,6 @@ const AuthForm = () => {
         } catch (err: any) {
           alert("❌ Error: " + err.response?.data?.error || err.message);
         }
-        setIsLoggedIn(true);
 
         
     };
@@ -159,7 +176,10 @@ const AuthForm = () => {
     //     alert("❌ Signup Error: " + err.message);
     //   }
     // };
+   
   
+
+
     return (
       <div className="max-w-md p-6 mx-auto mt-16 bg-white shadow-md dark:bg-zinc-900 rounded-xl">
         <Tabs defaultValue="login" className="w-full">

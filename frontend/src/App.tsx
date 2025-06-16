@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import MyEmission from "./pages/MyEmission";
-import Marketplace from "./pages/Marketplace";
+// import Marketplace from "./pages/Marketplace";
 import EmissionForm from "./pages/EmissionForm";
 import Sandbox from "./pages/Sandbox";
 import AdminPanel from "./pages/AdminPanel";
@@ -23,7 +23,7 @@ const App = () => {
             <Route path="/authform" element={<AuthForm />} />
             <Route path="/" element={<Home />} />
             <Route path="/MyEmission" element={<MyEmission />} />
-            <Route path="/marketplace" element={<Marketplace />} />
+            {/* <Route path="/marketplace" element={<Marketplace />} /> */}
             <Route path="/emission" element={<EmissionForm />} />
             <Route path="/sandbox" element={<Sandbox />} />
             <Route path="/admin" element={<AdminPanel />} />

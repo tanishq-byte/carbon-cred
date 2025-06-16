@@ -8,11 +8,14 @@ const Navbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrollY, setScrollY] = useState(0);
+  const [role, setRole] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     setIsLoggedIn(!!token);
+    const userRole = localStorage.getItem("role");
+    setRole(userRole);
   }, []);
 
   useEffect(() => {
@@ -22,10 +25,18 @@ const Navbar = () => {
   }, []);
 
   const handleLogout = () => {
+    // Disconnect wallet first
+    if (window.ethereum?.isConnected?.()) {
+      window.ethereum.removeAllListeners();
+    }
+    
     localStorage.removeItem("token");
     localStorage.removeItem("role");
     setIsLoggedIn(false);
+    setRole(null);
     navigate("/");
+    console.log("🚪 User logged out successfully");
+    alert("🚪 User logged out successfully");
   };
 
   const Logo = () => (
@@ -70,13 +81,22 @@ const Navbar = () => {
           <div className="hidden lg:flex items-center space-x-8">
             <NavLink to="/">Home</NavLink>
             <NavLink to="/MyEmission">My Emissions</NavLink>
-            <NavLink to="/marketplace">Marketplace</NavLink>
+            {/* <NavLink to="/marketplace">Marketplace</NavLink> */}
             <NavLink to="/emission">Emission</NavLink>
             <NavLink to="/sandbox">Sandbox</NavLink>
-            <NavLink to="/admin">Admin</NavLink>
-            <NavLink to="/mint">Mint</NavLink>
-            <NavLink to="/dashboard">Dashboard</NavLink>
-            <NavLink to="/hehe">Hehe</NavLink>
+            {role === 'admin' && (
+              <>
+                <NavLink to="/admin">Admin</NavLink>
+                <NavLink to="/mint">Mint</NavLink>
+              </>
+            )}
+            
+            {(role === 'credit-holder' || role === 'admin') && (
+              <>
+                <NavLink to="/dashboard">Dashboard</NavLink>
+                <NavLink to="/hehe">Hehe</NavLink>
+              </>
+            )}
           </div>
 
           {/* Desktop Right Side */}
@@ -99,9 +119,11 @@ const Navbar = () => {
                 <span>Register</span>
               </Link>
             )}
-            <div className="relative">
-              <WalletConnectButton />
-            </div>
+            {(role === 'admin' || role === 'credit-holder') && (
+              <div className="relative">
+                <WalletConnectButton />
+              </div>
+            )}
           </div>
 
           {/* Mobile Menu Button */}

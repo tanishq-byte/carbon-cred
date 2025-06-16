@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Card, CardContent } from "@/components/ui/card";
 import { LoaderCircle, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface UserProfile {
   email: string;
@@ -14,6 +15,7 @@ const Profile: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>("");
   const [wallet, setWallet] = useState<string | null>(null);
+  const navigate = useNavigate();
   
     useEffect(() => {
       if (window.ethereum?.selectedAddress) {
@@ -60,10 +62,52 @@ const Profile: React.FC = () => {
 
   if (error) {
     return (
-      <div className="text-red-500 flex items-center gap-2 justify-center mt-10">
-        <AlertCircle className="text-red-500" /> {error}
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="flex items-center justify-center min-h-[200px]">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-500/20">
+              <AlertCircle className="w-6 h-6 text-red-400 animate-pulse" />
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-lg font-medium text-red-400">Authentication Required</h3>
+              <p className="text-sm text-gray-300">{error}</p>
+            </div>
+            
+            <div className="flex items-center justify-center gap-3 pt-2 w-full">
+              <button 
+                onClick={() => navigate("/authform")} 
+                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg shadow-blue-500/20"
+              >
+                Go to Login
+              </button>
+              
+              <button 
+                onClick={() => setError("")} 
+                className="px-4 py-2 border border-gray-600 hover:border-gray-500 text-gray-300 hover:text-white rounded-lg font-medium transition-all duration-300 hover:bg-slate-800/50"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     );
+    // return (
+    //   <div className="text-red-500 flex items-center gap-2 justify-center mt-10">
+    //     <AlertCircle className="text-red-500" /> {error}
+    //     <button onClick={() => {navigate("/authform");}} className="ml-4 text-blue-500 hover:underline">
+    //       Login first
+    //     </button>
+    //     <button 
+    //       onClick={() => setError("")} 
+    //       className="ml-4 text-blue-500 hover:underline"
+    //     >
+    //       Dismiss
+    //     </button>
+        
+    //   </div>
+    // );
   }
 
   return (
