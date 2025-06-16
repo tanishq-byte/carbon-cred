@@ -61,7 +61,7 @@ const MAIN_CONTRACT_ABI = [
 
 // Configuration
 const CONFIG = {
-  contractAddress: "0x6aD4fB62788143478C8Eaa23103c42F8bf8323fC", // Replace with your deployed contract address
+  contractAddress: "0x9e3AE2cbcA409D4ec446168950889B00076F9ab5", // Replace with your deployed contract address
   tokenAddress: "0x112A911E546f5E2640DbEA4D156028a740b482eC", // Replace with your token contract address
   apiUrl: "http://localhost:8000/api/transactions"
 };
@@ -78,6 +78,7 @@ const useWallet = () => {
   const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null);
   const [tokenContract, setTokenContract] = useState<ethers.Contract | null>(null);
   const [mainContract, setMainContract] = useState<ethers.Contract | null>(null);
+  const [contractTokenBalance, setContractTokenBalance] = useState<string>('0');
 
   const connectWallet = async (): Promise<boolean> => {
     try {
@@ -141,6 +142,7 @@ const useWallet = () => {
     setSigner(null);
     setTokenContract(null);
     setMainContract(null);
+    setContractTokenBalance('0');
   };
 
   const updateBalances = useCallback(async () => {
@@ -152,13 +154,21 @@ const useWallet = () => {
       const ethBalanceFormatted = parseFloat(ethers.formatEther(ethBalance)).toFixed(4);
 
       let tokenBalanceFormatted = 'N/A';
+      let contractTokenBalanceFormatted = '0';
       
-      // Update token balance
+      // Update token balance and contract token balance
       if (tokenContract) {
         try {
           const tokenBalance = await tokenContract.balanceOf(wallet.address);
           const decimals = await tokenContract.decimals();
           tokenBalanceFormatted = parseFloat(ethers.formatUnits(tokenBalance, decimals)).toFixed(2);
+
+          // Get contract's token balance (deposited tokens available for purchase)
+          if (CONFIG.contractAddress !== "YOUR_CONTRACT_ADDRESS") {
+            const contractBalance = await tokenContract.balanceOf(CONFIG.contractAddress);
+            contractTokenBalanceFormatted = parseFloat(ethers.formatUnits(contractBalance, decimals)).toFixed(2);
+            setContractTokenBalance(contractTokenBalanceFormatted);
+          }
         } catch (error) {
           console.log('Token contract not available');
         }
@@ -180,6 +190,7 @@ const useWallet = () => {
     signer,
     tokenContract,
     mainContract,
+    contractTokenBalance,
     connectWallet,
     disconnectWallet,
     updateBalances
@@ -277,6 +288,26 @@ const WalletSection: React.FC<{
             <div className="text-xl font-bold">{wallet.tokenBalance}</div>
             <div className="text-sm opacity-90">CCT Balance</div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DepositedTokensSection: React.FC<{
+  contractTokenBalance: string;
+  wallet: WalletState;
+}> = ({ contractTokenBalance, wallet }) => {
+  if (!wallet.isConnected) return null;
+
+  return (
+    <div className="bg-white/95 backdrop-blur-lg rounded-3xl p-6 shadow-xl border border-white/20">
+      <h3 className="text-lg font-semibold mb-4 text-gray-700">🏦 Contract Token Pool</h3>
+      <div className="bg-gradient-to-r from-blue-400 to-cyan-400 text-white p-6 rounded-2xl text-center">
+        <div className="text-3xl font-bold mb-2">{contractTokenBalance}</div>
+        <div className="text-sm opacity-90 mb-2">CCT Available for Purchase</div>
+        <div className="text-xs opacity-75 bg-white/20 p-2 rounded-lg">
+          These are deposited tokens that users can buy with ETH
         </div>
       </div>
     </div>
@@ -476,27 +507,31 @@ const TokenActionsSection: React.FC<{
           </button>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-600 mb-2">
-            Deposit Tokens (CCT Amount)
-          </label>
-          <input
-            type="number"
-            value={depositAmount}
-            onChange={(e) => setDepositAmount(e.target.value)}
-            placeholder="1"
-            step="0.1"
-            min="0"
-            className="w-full p-3 text-black border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors"
-          />
-          <button
-            onClick={handleDepositTokens}
-            disabled={isLoading === 'deposit' || !depositAmount}
-            className="w-full mt-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-xl font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-          >
-            {isLoading === 'deposit' ? '⏳ Processing...' : '🏦 Deposit Tokens'}
-          </button>
-        </div>
+        {(localStorage.getItem("role") === 'admin') && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-2">
+                    Deposit Tokens (CCT Amount)
+                  </label>
+                  <input
+                    type="number"
+                    value={depositAmount}
+                    onChange={(e) => setDepositAmount(e.target.value)}
+                    placeholder="1"
+                    step="0.1"
+                    min="0"
+                    className="w-full p-3 text-black border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:outline-none transition-colors"
+                  />
+                  <button
+                    onClick={handleDepositTokens}
+                    disabled={isLoading === 'deposit' || !depositAmount}
+                    className="w-full mt-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white py-3 rounded-xl font-semibold hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    {isLoading === 'deposit' ? '⏳ Processing...' : '🏦 Deposit Tokens'}
+                  </button>
+                </div>
+              </>
+            )}
 
         <button
           onClick={handleWithdrawETH}
@@ -596,6 +631,7 @@ const CarbonCreditDApp: React.FC = () => {
     wallet,
     tokenContract,
     mainContract,
+    contractTokenBalance,
     connectWallet,
     updateBalances
   } = useWallet();
@@ -639,6 +675,11 @@ const CarbonCreditDApp: React.FC = () => {
               wallet={wallet}
               onConnect={connectWallet}
               onShowStatus={showStatus}
+            />
+            
+            <DepositedTokensSection
+              contractTokenBalance={contractTokenBalance}
+              wallet={wallet}
             />
             
             <UserStatsSection
