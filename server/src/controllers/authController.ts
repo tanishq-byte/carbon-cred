@@ -1,6 +1,7 @@
 import User from "../models/User";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { Request, Response } from "express";
 
 export const registerUser = async (req: any, res: any) => {
   const { email, password, role } = req.body;
@@ -26,5 +27,47 @@ export const loginUser = async (req: any, res: any) => {
   } catch (err: unknown) {
     const error = err as Error;
     res.status(400).json({ error: error.message });
+  }
+};
+// export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
+//   const { userId } = req.query; // we expect the ID to come from a query param like ?userId=xyz
+
+//   if (!userId || typeof userId !== "string") {
+//     res.status(400).json({ error: "Missing or invalid userId" });
+//     return;
+//   }
+
+//   try {
+//     const user = await User.findById(userId).select("-password");
+//     if (!user) {
+//       res.status(404).json({ error: "User not found" });
+//       return;
+//     }
+
+//     res.status(200).json(user);
+//   } catch (err: unknown) {
+//     const error = err as Error;
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+export const getUserProfile = async (req: any, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      res.status(400).json({ error: "Missing or invalid userId" });
+      return;
+    }
+
+    const user = await User.findById(userId).select("-password");
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    res.status(200).json(user);
+  } catch (err: unknown) {
+    const error = err as Error;
+    res.status(500).json({ error: error.message });
   }
 };

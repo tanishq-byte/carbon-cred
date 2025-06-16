@@ -81,6 +81,7 @@ const Navbar = () => {
 
           {/* Desktop Right Side */}
           <div className="hidden lg:flex items-center space-x-4">
+          <NavLink to="/profile">Profile</NavLink>
             {isLoggedIn ? (
               <button 
                 onClick={handleLogout} 
@@ -98,7 +99,6 @@ const Navbar = () => {
                 <span>Register</span>
               </Link>
             )}
-            
             <div className="relative">
               <WalletConnectButton />
             </div>

@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.loginUser = exports.registerUser = void 0;
+exports.getUserProfile = exports.loginUser = exports.registerUser = void 0;
 const User_1 = __importDefault(require("../models/User"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -47,3 +47,42 @@ const loginUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.loginUser = loginUser;
+// export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
+//   const { userId } = req.query; // we expect the ID to come from a query param like ?userId=xyz
+//   if (!userId || typeof userId !== "string") {
+//     res.status(400).json({ error: "Missing or invalid userId" });
+//     return;
+//   }
+//   try {
+//     const user = await User.findById(userId).select("-password");
+//     if (!user) {
+//       res.status(404).json({ error: "User not found" });
+//       return;
+//     }
+//     res.status(200).json(user);
+//   } catch (err: unknown) {
+//     const error = err as Error;
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+const getUserProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.userId;
+        if (!userId) {
+            res.status(400).json({ error: "Missing or invalid userId" });
+            return;
+        }
+        const user = yield User_1.default.findById(userId).select("-password");
+        if (!user) {
+            res.status(404).json({ error: "User not found" });
+            return;
+        }
+        res.status(200).json(user);
+    }
+    catch (err) {
+        const error = err;
+        res.status(500).json({ error: error.message });
+    }
+});
+exports.getUserProfile = getUserProfile;

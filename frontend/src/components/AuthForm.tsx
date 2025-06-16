@@ -87,9 +87,12 @@ const AuthForm = () => {
           const route = isLogin ? "login" : "register";
           const res = await API.post(`/auth/${route}`, { email, password });
           localStorage.setItem("token", res.data.token);
-          localStorage.setItem("role", res.data.role);  // <--- this is what was missing!
+          localStorage.setItem("role", res.data.role);  
+          //if (res.data.userId) {
+            localStorage.setItem("userId", res.data.userId); 
+          //}
           setTimeout(() => {
-            navigate("/dashboard");
+            navigate("/profile");
             window.location.reload();
           }, 1000);
           //window.location.reload(); // optional: isse force refresh hota h
@@ -97,7 +100,7 @@ const AuthForm = () => {
           alert(`✅ ${isLogin ? "Logged in" : "Registered"} as ${email}`);
         } catch (err: any) {
           alert("❌ Error: " + err.response?.data?.error || err.message);
-        };
+        }
         setIsLoggedIn(true);
 
         

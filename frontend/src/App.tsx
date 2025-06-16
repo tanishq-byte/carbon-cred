@@ -8,8 +8,9 @@ import AdminPanel from "./pages/AdminPanel";
 import Navbar from "./components/Navbar";
 import AuthForm from "./components/AuthForm";
 import TokenManager from "./pages/TokenManager";
-import Dashboard from "./pages/Dashboard"
-import Hehe from "./pages/Hehe"
+import Dashboard from "./pages/Dashboard";
+import Hehe from "./pages/Hehe";
+import Profile from "./pages/Profile";
 
 
 const App = () => {
@@ -28,7 +29,7 @@ const App = () => {
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/mint" element={<TokenManager />} />
             <Route path="/dashboard" element={<Dashboard />} />
-
+            <Route path="/profile" element={<Profile />} />
             <Route path="/hehe" element={<Hehe />} />
 
 
